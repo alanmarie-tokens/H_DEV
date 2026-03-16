@@ -5609,6 +5609,32 @@ function applyRemoteData(data) {
         return;
     }
 
+    // Abort any in-progress drag or resize before replacing the rows/tasks references.
+    // If not aborted, stale object references in dragState would cause tasks to appear
+    // duplicated (once from Firebase data in the source row, once pushed to the target row).
+    if (dragMoved && dragState) {
+        console.log('⚠️ [Firebase] Annulation du déplacement en cours (mise à jour distante reçue)');
+        dragState.task.start = toYMD(dragState.origStart);
+        dragState.task.end   = toYMD(dragState.origEnd);
+        dragState.bar.classList.remove('dragging');
+        document.querySelectorAll('.gantt-row.drop-target').forEach(r => r.classList.remove('drop-target'));
+        document.querySelectorAll('.task-ghost').forEach(g => g.remove());
+        document.body.classList.remove('is-dragging');
+        dragState = null;
+        dragMoved = false;
+        removeSnapLine();
+        hideDragLabel();
+    }
+    if (resizeState) {
+        console.log('⚠️ [Firebase] Annulation du redimensionnement en cours (mise à jour distante reçue)');
+        resizeState.task.start = resizeState.anchorStart.toISOString().slice(0, 10);
+        resizeState.task.end   = resizeState.anchorEnd.toISOString().slice(0, 10);
+        document.body.classList.remove('is-resizing');
+        resizeState = null;
+        removeSnapLine();
+        hideDragLabel();
+    }
+
     console.log('🔵 [Firebase] Données distantes valides:', {
         rowsCount: data.rows.length,
         groupsCount: data.groups ? data.groups.length : 0,
