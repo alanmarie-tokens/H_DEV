@@ -2377,9 +2377,52 @@
             text-transform: none;
             letter-spacing: 0;
         }
+
+        /* ══ LOADING OVERLAY ══ */
+        #loadingOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 20px;
+            z-index: 10000;
+        }
+
+        #loadingOverlay.hidden {
+            display: none;
+        }
+
+        .loading-spinner {
+            width: 48px;
+            height: 48px;
+            border: 4px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: var(--text-muted);
+            font-size: 14px;
+        }
     </style>
 </head>
 <body>
+
+<div id="loadingOverlay">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Chargement du planning...</div>
+</div>
 
 <div class="header">
     <span class="logo"><span class="logo-dot"></span>GANTT</span>
@@ -5360,34 +5403,72 @@ function wrapMutating(fn) {
     return function(...args) { pushUndo(); return fn.apply(this, args); };
 }
 
-// ─── PERSISTANCE localStorage ────────────────────────────
-const LS_KEY = 'gantt_v2_data';
+// ─── PERSISTANCE API ────────────────────────────
+const API_BASE = window.location.origin + '/api';
+let saveInProgress = false;
 
-function saveToStorage() {
+async function saveToStorage() {
+    if (saveInProgress) return;
+    saveInProgress = true;
+
     try {
-        localStorage.setItem(LS_KEY, JSON.stringify({
-            rows, groups, milestones, taskIdCounter, groupIdCounter, msIdCounter,
-            zoom, viewStart: viewStart.toISOString(), savedAt: new Date().toISOString()
-        }));
-    } catch(e) { /* quota */ }
+        const response = await fetch(`${API_BASE}/planning`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                version: 2,
+                rows,
+                groups,
+                milestones,
+                taskIdCounter,
+                groupIdCounter,
+                msIdCounter,
+                zoom,
+                viewStart: viewStart.toISOString()
+            })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to save planning data');
+        }
+
+        console.log('Planning saved successfully');
+    } catch(e) {
+        console.error('Error saving to API:', e);
+        showToast('❌ Erreur lors de la sauvegarde', true);
+    } finally {
+        saveInProgress = false;
+    }
 }
 
-function loadFromStorage() {
+async function loadFromStorage() {
     try {
-        const raw = localStorage.getItem(LS_KEY);
-        if (!raw) return false;
-        const d = JSON.parse(raw);
+        const response = await fetch(`${API_BASE}/planning`);
+        if (!response.ok) {
+            throw new Error('Failed to load planning data');
+        }
+
+        const d = await response.json();
         if (!d.rows || !Array.isArray(d.rows)) return false;
+
         rows = d.rows;
         groups = d.groups || [];
         milestones = d.milestones || [];
         taskIdCounter = d.taskIdCounter || 0;
         groupIdCounter = d.groupIdCounter || 3;
         msIdCounter = d.msIdCounter || 0;
-        if (d.zoom) { zoom = d.zoom; document.querySelectorAll('.zoom-btn').forEach(b => b.classList.toggle('active', b.dataset.zoom === zoom)); }
+        if (d.zoom) {
+            zoom = d.zoom;
+            document.querySelectorAll('.zoom-btn').forEach(b => b.classList.toggle('active', b.dataset.zoom === zoom));
+        }
         if (d.viewStart) viewStart = new Date(d.viewStart);
         return true;
-    } catch(e) { return false; }
+    } catch(e) {
+        console.error('Error loading from API:', e);
+        return false;
+    }
 }
 
 // Auto-save on every render (debounced)
@@ -5940,13 +6021,28 @@ document.addEventListener('keydown', e => {
         manualSave();
     }
 });
-if (loadFromStorage()) {
-    showToast('💾 Planning restauré', false);
-} else {
-    viewStart = startOfMonth(today);
-}
-render();
-updateUndoButtons();
+// Initialize the application
+(async function init() {
+    const loadingOverlay = document.getElementById('loadingOverlay');
+
+    try {
+        const loaded = await loadFromStorage();
+        if (loaded) {
+            showToast('💾 Planning restauré', false);
+        } else {
+            viewStart = startOfMonth(today);
+        }
+    } catch (error) {
+        console.error('Initialization error:', error);
+        showToast('❌ Erreur de chargement, démarrage avec données vides', true);
+        viewStart = startOfMonth(today);
+    } finally {
+        loadingOverlay.classList.add('hidden');
+    }
+
+    render();
+    updateUndoButtons();
+})();
 </script>
 </body>
 </html>
