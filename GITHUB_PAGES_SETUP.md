@@ -45,8 +45,8 @@ Lorsque cette branche sera mergée dans `main`, le workflow se déclenchera auto
 
 - Le déploiement prend généralement 1-2 minutes
 - Chaque push sur `main` déclenchera un nouveau déploiement automatique
-- L'application utilise localStorage, donc toutes les données sont stockées dans le navigateur
-- Pas besoin de serveur backend : tout fonctionne en statique
+- L'application utilise Firebase Realtime Database, donc une configuration Firebase est REQUISE
+- Pas besoin de serveur backend : tout fonctionne en statique avec Firebase
 
 ## Dépannage
 
@@ -63,6 +63,7 @@ Lorsque cette branche sera mergée dans `main`, le workflow se déclenchera auto
 
 ### Les données ne se sauvegardent pas
 
-- Vérifiez que localStorage est activé dans votre navigateur
-- Vérifiez que vous n'êtes pas en mode navigation privée
+- Vérifiez que Firebase est correctement configuré (voir [FIREBASE_SETUP.md](./FIREBASE_SETUP.md))
+- Vérifiez votre connexion internet
+- Vérifiez les règles de sécurité Firebase dans la console Firebase
 - Consultez la console JavaScript pour voir les erreurs éventuelles

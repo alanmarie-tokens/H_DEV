@@ -4657,7 +4657,7 @@ function computePeriodReport(sourceTasks, tab, navOffset) {
 }
 let dbFilterGroups = new Set(); // empty = show all; otherwise group IDs to include
 let kpiEditMode = false;
-// KPI visibility config — all on by default; persisted to localStorage
+// KPI visibility config — all on by default; persisted to Firebase
 const KPI_DEFS = [
     { id: 'cost',     label: 'Coût total',    icon: '💰' },
     { id: 'etp',      label: 'ETP moyen',     icon: '👤' },
@@ -4668,13 +4668,16 @@ const KPI_DEFS = [
     { id: 'total',    label: 'Total tâches',  icon: '#' },
     { id: 'notes',    label: 'Avec notes',    icon: '📝' },
 ];
-function loadKpiConfig() {
-    try { return JSON.parse(localStorage.getItem('kpiConfig') || 'null') || {}; } catch { return {}; }
+
+async function loadKpiConfig() {
+    return await loadUserSetting('kpiConfig', {});
 }
-function saveKpiConfig(cfg) {
-    try { localStorage.setItem('kpiConfig', JSON.stringify(cfg)); } catch {}
+
+async function saveKpiConfig(cfg) {
+    await saveUserSetting('kpiConfig', cfg);
 }
-let kpiConfig = loadKpiConfig(); // { id: false } means hidden
+
+let kpiConfig = {}; // Will be loaded async in init()
 
 function renderDashboard() {
     const body = document.getElementById('dashboardBody');
@@ -5433,13 +5436,15 @@ function wrapMutating(fn) {
 }
 
 // ─── CONFIGURATION FIREBASE (synchronisation multi-utilisateurs) ─────────────
+// Firebase Realtime Database est REQUIS pour que l'application fonctionne.
 // Pour activer la synchronisation en temps réel entre plusieurs utilisateurs :
 //   1. Créez un projet Firebase sur https://console.firebase.google.com
 //   2. Activez "Realtime Database" (choisir une région Europe si possible)
 //   3. Dans les règles de sécurité, commencez avec les règles de test (lire/écrire)
 //   4. Copiez la configuration de votre projet ci-dessous (Paramètres > Vos apps > Web)
 //
-// Si FIREBASE_CONFIG.databaseURL est vide, l'app fonctionne en mode local (localStorage).
+// IMPORTANT: La configuration Firebase doit être complète pour que l'application fonctionne.
+// Toutes les données (planning, préférences utilisateur) sont stockées dans Firebase uniquement.
 const FIREBASE_CONFIG = {
     apiKey:            "AIzaSyAT4342sQSS5Vv_oM9Xce2jXMkh2ZkotbM",   // ex: "AIzaSy..."
     authDomain:        "hdev-c3842.firebaseapp.com",   // ex: "mon-projet.firebaseapp.com"
@@ -5451,24 +5456,54 @@ const FIREBASE_CONFIG = {
     measurementId: "G-YRM01CD1VY"
 };
 
-// Chemin dans la Realtime Database (permet d'héberger plusieurs plannings dans un même projet)
+// Chemins dans la Realtime Database (permet d'héberger plusieurs plannings dans un même projet)
 const DB_PLANNING_PATH = 'planning';
+const DB_USER_SETTINGS_PATH = 'userSettings'; // Pour stocker les préférences utilisateur
 
 // ─── ÉTAT FIREBASE ─────────────────────────────────────────────────────────
 let firebaseDB = null;
 let firebaseListenerActive = false; // Guard against duplicate listener registration
+let _cachedClientId = null; // Cache en mémoire pour éviter les appels répétés
 
 // Identifiant unique du navigateur courant (pour différencier les clients)
-function getClientId() {
-    let id = localStorage.getItem('gantt_client_id');
-    if (!id) {
-        id = 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 6);
-        localStorage.setItem('gantt_client_id', id);
-        console.log('🔵 [Firebase] Nouveau client ID généré:', id);
-    } else {
-        console.log('🔵 [Firebase] Client ID existant récupéré:', id);
+// Stocké dans Firebase pour persistence multi-sessions
+async function getClientId() {
+    if (_cachedClientId) {
+        return _cachedClientId;
     }
-    return id;
+
+    if (!firebaseDB) {
+        console.error('❌ [Firebase] Firebase non initialisé, impossible de générer un client ID');
+        throw new Error('Firebase requis pour obtenir un client ID');
+    }
+
+    try {
+        // Générer un ID basé sur des caractéristiques du navigateur
+        const browserFingerprint = navigator.userAgent + navigator.language + screen.width + screen.height;
+        const hash = browserFingerprint.split('').reduce((a, b) => {
+            a = ((a << 5) - a) + b.charCodeAt(0);
+            return a & a;
+        }, 0);
+        const fingerprintId = 'fp_' + Math.abs(hash).toString(36);
+
+        // Vérifier si un ID existe déjà pour ce fingerprint
+        const snapshot = await firebaseDB.ref(`${DB_USER_SETTINGS_PATH}/${fingerprintId}/clientId`).get();
+
+        if (snapshot.exists()) {
+            _cachedClientId = snapshot.val();
+            console.log('🔵 [Firebase] Client ID récupéré depuis Firebase:', _cachedClientId);
+        } else {
+            // Créer un nouvel ID unique
+            _cachedClientId = 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 6);
+            await firebaseDB.ref(`${DB_USER_SETTINGS_PATH}/${fingerprintId}/clientId`).set(_cachedClientId);
+            console.log('🔵 [Firebase] Nouveau client ID généré et sauvegardé:', _cachedClientId);
+        }
+
+        return _cachedClientId;
+    } catch (error) {
+        console.error('❌ [Firebase] Erreur lors de la récupération du client ID:', error);
+        throw error;
+    }
 }
 
 function updateSyncStatus(status) {
@@ -5521,19 +5556,6 @@ function applyRemoteData(data) {
 
     console.log('✅ [Firebase] Variables locales mises à jour');
 
-    // Mirror to localStorage as fallback cache
-    console.log('🔵 [Firebase] Synchronisation vers localStorage (cache de secours)...');
-    try {
-        localStorage.setItem(STORAGE_KEY, JSON.stringify({
-            version: 2, rows, groups, milestones,
-            taskIdCounter, groupIdCounter, msIdCounter,
-            zoom, viewStart: viewStart.toISOString()
-        }));
-        console.log('✅ [Firebase] localStorage mis à jour avec succès');
-    } catch (e) {
-        console.error('❌ [Firebase] Échec de la mise à jour du localStorage:', e);
-    }
-
     console.log('🔵 [Firebase] Rendu de l\'interface...');
     render();
     updateSyncStatus('synced');
@@ -5584,7 +5606,7 @@ function initFirebaseSync() {
 
 // Called after initial load to start listening for remote changes.
 // Uses _clientId to ignore our own writes — more reliable than a timing flag.
-function startFirebaseListener() {
+async function startFirebaseListener() {
     console.log('🔵 [Firebase] Démarrage du listener Firebase...');
     console.log('🔵 [Firebase] État - firebaseDB:', firebaseDB ? 'disponible' : 'null');
     console.log('🔵 [Firebase] État - firebaseListenerActive:', firebaseListenerActive);
@@ -5600,41 +5622,45 @@ function startFirebaseListener() {
     firebaseListenerActive = true;
     console.log('✅ [Firebase] firebaseListenerActive défini à true');
 
-    const clientId = getClientId();
-    console.log('🔵 [Firebase] ID du client:', clientId);
-    console.log('🔵 [Firebase] Écoute des changements sur le chemin:', DB_PLANNING_PATH);
+    try {
+        const clientId = await getClientId();
+        console.log('🔵 [Firebase] ID du client:', clientId);
+        console.log('🔵 [Firebase] Écoute des changements sur le chemin:', DB_PLANNING_PATH);
 
-    firebaseDB.ref(DB_PLANNING_PATH).on('value', snapshot => {
-        console.log('🔔 [Firebase] Événement reçu sur', DB_PLANNING_PATH);
-        const data = snapshot.val();
+        firebaseDB.ref(DB_PLANNING_PATH).on('value', snapshot => {
+            console.log('🔔 [Firebase] Événement reçu sur', DB_PLANNING_PATH);
+            const data = snapshot.val();
 
-        if (!data) {
-            console.log('⚠️ [Firebase] Données reçues: null ou undefined');
-            return;
-        }
+            if (!data) {
+                console.log('⚠️ [Firebase] Données reçues: null ou undefined');
+                return;
+            }
 
-        console.log('🔵 [Firebase] Données reçues:', {
-            hasRows: Array.isArray(data.rows),
-            rowsCount: data.rows ? data.rows.length : 0,
-            remoteClientId: data._clientId,
-            localClientId: clientId,
-            savedAt: data._savedAt ? new Date(data._savedAt).toISOString() : 'N/A'
+            console.log('🔵 [Firebase] Données reçues:', {
+                hasRows: Array.isArray(data.rows),
+                rowsCount: data.rows ? data.rows.length : 0,
+                remoteClientId: data._clientId,
+                localClientId: clientId,
+                savedAt: data._savedAt ? new Date(data._savedAt).toISOString() : 'N/A'
+            });
+
+            if (data._clientId === clientId) {
+                console.log('⏭️ [Firebase] Ignorer les modifications de ce client (évite la boucle)');
+                return; // Skip our own writes
+            }
+
+            console.log('✅ [Firebase] Application des données distantes...');
+            applyRemoteData(data);
         });
 
-        if (data._clientId === clientId) {
-            console.log('⏭️ [Firebase] Ignorer les modifications de ce client (évite la boucle)');
-            return; // Skip our own writes
-        }
-
-        console.log('✅ [Firebase] Application des données distantes...');
-        applyRemoteData(data);
-    });
-
-    console.log('✅ [Firebase] Listener Firebase actif et prêt');
+        console.log('✅ [Firebase] Listener Firebase actif et prêt');
+    } catch (error) {
+        console.error('❌ [Firebase] Erreur lors du démarrage du listener:', error);
+        firebaseListenerActive = false;
+    }
 }
 
-// ─── PERSISTANCE LOCALSTORAGE + FIREBASE ─────────────────────────────────────
-const STORAGE_KEY = 'gantt_planning_data';
+// ─── PERSISTANCE FIREBASE UNIQUEMENT ─────────────────────────────────────────
 let saveInProgress = false;
 
 async function saveToStorage() {
@@ -5642,8 +5668,14 @@ async function saveToStorage() {
         console.log('⏭️ [Sauvegarde] Sauvegarde déjà en cours, ignoré');
         return;
     }
-    saveInProgress = true;
 
+    if (!firebaseDB) {
+        console.error('❌ [Sauvegarde] Firebase non configuré - impossible de sauvegarder');
+        showToast('❌ Firebase requis pour sauvegarder les données', true);
+        return;
+    }
+
+    saveInProgress = true;
     console.log('🔵 [Sauvegarde] Début de la sauvegarde...');
 
     try {
@@ -5667,67 +5699,54 @@ async function saveToStorage() {
             zoom: zoom
         });
 
-        // Always persist locally
-        console.log('🔵 [Sauvegarde] Sauvegarde dans localStorage...');
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-        console.log('✅ [Sauvegarde] localStorage sauvegardé avec succès');
+        const clientId = await getClientId();
+        console.log('🔵 [Firebase] Synchronisation avec Firebase...');
+        console.log('🔵 [Firebase] Client ID:', clientId);
+        console.log('🔵 [Firebase] Chemin:', DB_PLANNING_PATH);
 
-        // Sync to Firebase when configured
-        if (firebaseDB) {
-            const clientId = getClientId();
-            console.log('🔵 [Firebase] Synchronisation avec Firebase...');
-            console.log('🔵 [Firebase] Client ID:', clientId);
-            console.log('🔵 [Firebase] Chemin:', DB_PLANNING_PATH);
+        try {
+            await firebaseDB.ref(DB_PLANNING_PATH).set({
+                ...data,
+                _clientId: clientId,
+                _savedAt:  Date.now()
+            });
 
-            try {
-                await firebaseDB.ref(DB_PLANNING_PATH).set({
-                    ...data,
-                    _clientId: clientId,
-                    _savedAt:  Date.now()
-                });
+            console.log('✅ [Firebase] Données synchronisées avec succès');
+            updateSyncStatus('synced');
+            console.log('✅ [Sauvegarde] Planning sauvegardé avec succès');
+        } catch (firebaseError) {
+            // Detect specific Firebase errors
+            const errorCode = firebaseError.code;
+            const errorMessage = firebaseError.message;
 
-                console.log('✅ [Firebase] Données synchronisées avec succès');
-                updateSyncStatus('synced');
-            } catch (firebaseError) {
-                // Detect specific Firebase errors
-                const errorCode = firebaseError.code;
-                const errorMessage = firebaseError.message;
+            console.error('❌ [Firebase] Erreur lors de la synchronisation Firebase:', firebaseError);
+            console.error('❌ [Firebase] Code d\'erreur:', errorCode);
+            console.error('❌ [Firebase] Message:', errorMessage);
 
-                console.error('❌ [Firebase] Erreur lors de la synchronisation Firebase:', firebaseError);
-                console.error('❌ [Firebase] Code d\'erreur:', errorCode);
-                console.error('❌ [Firebase] Message:', errorMessage);
+            // Check for PERMISSION_DENIED error
+            if (errorCode === 'PERMISSION_DENIED' || errorMessage.includes('permission') || errorMessage.includes('Permission')) {
+                console.error('🚫 [Firebase] PERMISSION REFUSÉE - Vous n\'avez pas les droits d\'écriture sur Firebase');
+                console.error('🚫 [Firebase] Cause possible:');
+                console.error('   1. Les règles de sécurité Firebase interdisent l\'écriture');
+                console.error('   2. Le mode test Firebase a expiré (30 jours après activation)');
+                console.error('   3. Firebase Authentication est requis mais non configuré');
+                console.error('📖 [Firebase] Solution:');
+                console.error('   → Vérifiez les règles de sécurité dans Firebase Console');
+                console.error('   → URL: https://console.firebase.google.com/project/' + FIREBASE_CONFIG.projectId + '/database/rules');
+                console.error('   → Consultez FIREBASE_SETUP.md pour les règles recommandées');
 
-                // Check for PERMISSION_DENIED error
-                if (errorCode === 'PERMISSION_DENIED' || errorMessage.includes('permission') || errorMessage.includes('Permission')) {
-                    console.error('🚫 [Firebase] PERMISSION REFUSÉE - Vous n\'avez pas les droits d\'écriture sur Firebase');
-                    console.error('🚫 [Firebase] Cause possible:');
-                    console.error('   1. Les règles de sécurité Firebase interdisent l\'écriture');
-                    console.error('   2. Le mode test Firebase a expiré (30 jours après activation)');
-                    console.error('   3. Firebase Authentication est requis mais non configuré');
-                    console.error('📖 [Firebase] Solution:');
-                    console.error('   → Vérifiez les règles de sécurité dans Firebase Console');
-                    console.error('   → URL: https://console.firebase.google.com/project/' + FIREBASE_CONFIG.projectId + '/database/rules');
-                    console.error('   → Consultez FIREBASE_SETUP.md pour les règles recommandées');
-
-                    showToast('⚠️ Sauvegarde locale OK — Firebase en lecture seule (vérifiez les permissions)', true);
-                    updateSyncStatus('error');
-                } else {
-                    // Other Firebase errors (network, etc.)
-                    console.error('❌ [Firebase] Erreur réseau ou Firebase indisponible');
-                    showToast('⚠️ Sauvegarde locale OK — Firebase temporairement indisponible', true);
-                    updateSyncStatus('offline');
-                }
-
-                // localStorage save succeeded, so don't throw
-                console.log('✅ [Sauvegarde] Planning sauvegardé localement (Firebase échoué)');
+                showToast('❌ Erreur: Firebase en lecture seule (vérifiez les permissions)', true);
+                updateSyncStatus('error');
+            } else {
+                // Other Firebase errors (network, etc.)
+                console.error('❌ [Firebase] Erreur réseau ou Firebase indisponible');
+                showToast('❌ Erreur: Firebase temporairement indisponible', true);
+                updateSyncStatus('offline');
             }
-        } else {
-            console.log('⚠️ [Firebase] Firebase non configuré, sauvegarde locale uniquement');
-        }
 
-        console.log('✅ [Sauvegarde] Planning sauvegardé avec succès');
+            throw firebaseError; // Re-throw pour propager l'erreur
+        }
     } catch(e) {
-        // This catch is for localStorage errors or other critical failures
         console.error('❌ [Sauvegarde] Erreur critique lors de la sauvegarde:', e);
         console.error('❌ [Sauvegarde] Détails:', e.message);
         showToast('❌ Erreur lors de la sauvegarde', true);
@@ -5741,90 +5760,93 @@ async function saveToStorage() {
 async function loadFromStorage() {
     console.log('🔵 [Chargement] Début du chargement des données...');
 
-    // Try Firebase first (authoritative source when configured)
-    if (firebaseDB) {
-        console.log('🔵 [Firebase] Firebase configuré, tentative de chargement depuis Firebase...');
-        console.log('🔵 [Firebase] Chemin:', DB_PLANNING_PATH);
-
-        try {
-            const snapshot = await firebaseDB.ref(DB_PLANNING_PATH).get();
-            console.log('✅ [Firebase] Snapshot récupéré');
-
-            const data = snapshot.val();
-
-            if (data) {
-                console.log('🔵 [Firebase] Données trouvées:', {
-                    hasRows: Array.isArray(data.rows),
-                    rowsCount: data.rows ? data.rows.length : 0,
-                    hasGroups: !!data.groups,
-                    hasMilestones: !!data.milestones,
-                    clientId: data._clientId,
-                    savedAt: data._savedAt ? new Date(data._savedAt).toISOString() : 'N/A'
-                });
-
-                if (Array.isArray(data.rows)) {
-                    console.log('✅ [Firebase] Données valides, application...');
-                    applyRemoteData(data);
-                    console.log('✅ [Chargement] Chargement depuis Firebase réussi');
-                    return true;
-                } else {
-                    console.warn('⚠️ [Firebase] Les données ne contiennent pas de tableau rows valide');
-                }
-            } else {
-                console.log('⚠️ [Firebase] Aucune donnée trouvée dans Firebase');
-            }
-        } catch (e) {
-            console.warn('⚠️ [Firebase] Échec du chargement Firebase, basculement vers localStorage:', e);
-            console.warn('⚠️ [Firebase] Détails:', e.message);
-        }
-    } else {
-        console.log('⚠️ [Firebase] Firebase non configuré, utilisation de localStorage');
+    if (!firebaseDB) {
+        console.error('❌ [Chargement] Firebase non configuré - impossible de charger les données');
+        showToast('❌ Firebase requis pour charger les données', true);
+        return false;
     }
 
-    // Fallback: localStorage
-    console.log('🔵 [Chargement] Tentative de chargement depuis localStorage...');
+    console.log('🔵 [Firebase] Firebase configuré, chargement depuis Firebase...');
+    console.log('🔵 [Firebase] Chemin:', DB_PLANNING_PATH);
+
     try {
-        const stored = localStorage.getItem(STORAGE_KEY);
+        const snapshot = await firebaseDB.ref(DB_PLANNING_PATH).get();
+        console.log('✅ [Firebase] Snapshot récupéré');
 
-        if (!stored) {
-            console.log('⚠️ [Chargement] Aucune donnée trouvée dans localStorage');
-            return false;
+        const data = snapshot.val();
+
+        if (data) {
+            console.log('🔵 [Firebase] Données trouvées:', {
+                hasRows: Array.isArray(data.rows),
+                rowsCount: data.rows ? data.rows.length : 0,
+                hasGroups: !!data.groups,
+                hasMilestones: !!data.milestones,
+                clientId: data._clientId,
+                savedAt: data._savedAt ? new Date(data._savedAt).toISOString() : 'N/A'
+            });
+
+            if (Array.isArray(data.rows)) {
+                console.log('✅ [Firebase] Données valides, application...');
+                applyRemoteData(data);
+                console.log('✅ [Chargement] Chargement depuis Firebase réussi');
+                return true;
+            } else {
+                console.warn('⚠️ [Firebase] Les données ne contiennent pas de tableau rows valide');
+            }
+        } else {
+            console.log('⚠️ [Firebase] Aucune donnée trouvée dans Firebase');
         }
 
-        console.log('🔵 [Chargement] Données trouvées dans localStorage, parsing...');
-        const d = JSON.parse(stored);
-
-        console.log('🔵 [Chargement] Données parsées:', {
-            version: d.version,
-            hasRows: !!d.rows,
-            isRowsArray: Array.isArray(d.rows),
-            rowsCount: d.rows ? d.rows.length : 0
-        });
-
-        if (!d.rows || !Array.isArray(d.rows)) {
-            console.error('❌ [Chargement] Format de données invalide dans localStorage');
-            return false;
-        }
-
-        console.log('🔵 [Chargement] Application des données depuis localStorage...');
-        rows = d.rows;
-        groups = d.groups || [];
-        milestones = d.milestones || [];
-        taskIdCounter = d.taskIdCounter || 0;
-        groupIdCounter = d.groupIdCounter || 3;
-        msIdCounter = d.msIdCounter || 0;
-        if (d.zoom) {
-            zoom = d.zoom;
-            document.querySelectorAll('.zoom-btn').forEach(b => b.classList.toggle('active', b.dataset.zoom === zoom));
-        }
-        if (d.viewStart) viewStart = new Date(d.viewStart);
-
-        console.log('✅ [Chargement] Chargement depuis localStorage réussi');
-        return true;
-    } catch(e) {
-        console.error('❌ [Chargement] Erreur lors du chargement depuis localStorage:', e);
-        console.error('❌ [Chargement] Détails:', e.message);
         return false;
+    } catch (e) {
+        console.error('❌ [Firebase] Échec du chargement Firebase:', e);
+        console.error('❌ [Firebase] Détails:', e.message);
+        showToast('❌ Erreur de chargement depuis Firebase', true);
+        return false;
+    }
+}
+
+// ─── GESTION DES PRÉFÉRENCES UTILISATEUR DANS FIREBASE ──────────────────────
+// Stocke et récupère les paramètres utilisateur (thème, KPI config, etc.)
+
+async function saveUserSetting(key, value) {
+    if (!firebaseDB) {
+        console.warn('⚠️ [Paramètres] Firebase non configuré, paramètre non sauvegardé:', key);
+        return;
+    }
+
+    try {
+        const clientId = await getClientId();
+        const path = `${DB_USER_SETTINGS_PATH}/${clientId}/${key}`;
+        await firebaseDB.ref(path).set(value);
+        console.log('✅ [Paramètres] Paramètre sauvegardé:', key, '=', value);
+    } catch (error) {
+        console.error('❌ [Paramètres] Erreur lors de la sauvegarde du paramètre:', key, error);
+    }
+}
+
+async function loadUserSetting(key, defaultValue = null) {
+    if (!firebaseDB) {
+        console.warn('⚠️ [Paramètres] Firebase non configuré, utilisation de la valeur par défaut:', key);
+        return defaultValue;
+    }
+
+    try {
+        const clientId = await getClientId();
+        const path = `${DB_USER_SETTINGS_PATH}/${clientId}/${key}`;
+        const snapshot = await firebaseDB.ref(path).get();
+
+        if (snapshot.exists()) {
+            const value = snapshot.val();
+            console.log('✅ [Paramètres] Paramètre chargé:', key, '=', value);
+            return value;
+        } else {
+            console.log('⚠️ [Paramètres] Paramètre non trouvé, utilisation de la valeur par défaut:', key);
+            return defaultValue;
+        }
+    } catch (error) {
+        console.error('❌ [Paramètres] Erreur lors du chargement du paramètre:', key, error);
+        return defaultValue;
     }
 }
 
@@ -5843,17 +5865,27 @@ function renderExtras() {
 
 // ─── LIGHT / DARK MODE ───────────────────────────────────
 let isDark = true;
-document.getElementById('btnTheme').addEventListener('click', () => {
-    isDark = !isDark;
+
+// Fonction pour appliquer le thème
+function applyTheme(theme) {
+    isDark = (theme === 'dark');
     document.documentElement.classList.toggle('light', !isDark);
     document.getElementById('btnTheme').textContent = isDark ? '🌙' : '☀️';
-    localStorage.setItem('gantt_theme', isDark ? 'dark' : 'light');
+}
+
+// Gestionnaire de clic pour le bouton de thème
+document.getElementById('btnTheme').addEventListener('click', async () => {
+    isDark = !isDark;
+    const newTheme = isDark ? 'dark' : 'light';
+    applyTheme(newTheme);
+    await saveUserSetting('theme', newTheme);
 });
-// Restore theme preference
-(function() {
-    const t = localStorage.getItem('gantt_theme');
-    if (t === 'light') { isDark = false; document.documentElement.classList.add('light'); document.getElementById('btnTheme').textContent = '☀️'; }
-})();
+
+// Chargement du thème au démarrage (appelé depuis init)
+async function loadThemePreference() {
+    const theme = await loadUserSetting('theme', 'dark');
+    applyTheme(theme);
+}
 
 // Holiday markings applied via renderExtras → applyHolidayMarkings()
 
@@ -6387,21 +6419,29 @@ document.addEventListener('keydown', e => {
     const loadingOverlay = document.getElementById('loadingOverlay');
 
     // Initialize Firebase connection (no listener yet — avoids race with initial load)
-    console.log('🔵 [Application] Étape 1/4: Initialisation de la connexion Firebase');
+    console.log('🔵 [Application] Étape 1/5: Initialisation de la connexion Firebase');
     initFirebaseSync();
 
+    // Vérifier que Firebase est configuré
+    if (!firebaseDB) {
+        console.error('❌ [Application] Firebase non configuré - l\'application ne peut pas fonctionner');
+        loadingOverlay.classList.add('hidden');
+        showToast('❌ Firebase requis - Veuillez configurer Firebase (voir FIREBASE_SETUP.md)', true);
+        return;
+    }
+
     try {
-        console.log('🔵 [Application] Étape 2/4: Chargement des données');
+        console.log('🔵 [Application] Étape 2/5: Chargement des préférences utilisateur');
+        // Charger les préférences utilisateur (thème, KPI config)
+        await loadThemePreference();
+        kpiConfig = await loadKpiConfig();
+
+        console.log('🔵 [Application] Étape 3/5: Chargement des données de planning');
         const loaded = await loadFromStorage();
 
         if (loaded) {
             console.log('✅ [Application] Données chargées avec succès');
-            if (!firebaseDB) {
-                console.log('⚠️ [Application] Mode local uniquement (Firebase non configuré)');
-                showToast('💾 Planning restauré (local)', false);
-            } else {
-                console.log('✅ [Application] Mode Firebase activé');
-            }
+            console.log('✅ [Application] Mode Firebase activé');
         } else {
             console.log('⚠️ [Application] Aucune donnée trouvée, initialisation avec données par défaut');
             viewStart = startOfMonth(today);
@@ -6416,13 +6456,13 @@ document.addEventListener('keydown', e => {
         console.log('✅ [Application] Overlay de chargement masqué');
     }
 
-    console.log('🔵 [Application] Étape 3/4: Rendu de l\'interface');
+    console.log('🔵 [Application] Étape 4/5: Rendu de l\'interface');
     render();
     updateUndoButtons();
 
     // Start real-time listener AFTER initial load to avoid race conditions
-    console.log('🔵 [Application] Étape 4/4: Démarrage du listener temps réel Firebase');
-    startFirebaseListener();
+    console.log('🔵 [Application] Étape 5/5: Démarrage du listener temps réel Firebase');
+    await startFirebaseListener();
 
     console.log('═══════════════════════════════════════════════════════');
     console.log('✅ [Application] Initialisation terminée avec succès!');
