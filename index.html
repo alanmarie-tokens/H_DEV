@@ -5168,15 +5168,15 @@ function buildRowDiv(row, colW, trackW, isChild) {
     // Recap cell
     const recap = document.createElement('div');
     recap.className = 'row-recap';
-    const { totalCost, avgEtp } = rowTotals(row);
+    const { taskCount, totalDays } = rowPeriodStats(row);
     recap.innerHTML = `
         <div class="recap-line">
-            <span class="recap-label">ETP moy.</span>
-            <span class="recap-value${avgEtp > 0 ? ' highlight' : ''}">${fmtEtp(avgEtp)}</span>
+            <span class="recap-label">Tâches</span>
+            <span class="recap-value${taskCount > 0 ? ' highlight' : ''}">${taskCount}</span>
         </div>
         <div class="recap-line">
-            <span class="recap-label">Coût</span>
-            <span class="recap-value${totalCost > 0 ? ' highlight' : ''}">${fmtCost(totalCost)}</span>
+            <span class="recap-label">Jours</span>
+            <span class="recap-value${totalDays > 0 ? ' highlight' : ''}">${totalDays}</span>
         </div>`;
 
     rowDiv.append(lbl, track, recap);
@@ -6426,6 +6426,26 @@ function rowTotals(row) {
     // ETP moyen = totalEtpDays / totalDays (pondéré par durée)
     const avgEtp = totalDays > 0 ? totalEtpDays / totalDays : 0;
     return { totalCost, avgEtp };
+}
+
+function rowPeriodStats(row) {
+    const periodStart = viewRangeStart().getTime();
+    const periodEnd = viewRangeEnd().getTime(); // exclusive
+    let taskCount = 0;
+    let totalDays = 0;
+
+    row.tasks.forEach(t => {
+        const ts = new Date(t.start).getTime();
+        const te = new Date(t.end).getTime();
+        const overlapStart = Math.max(ts, periodStart);
+        const overlapEnd = Math.min(te, periodEnd);
+        if (overlapEnd <= overlapStart) return;
+
+        taskCount += 1;
+        totalDays += Math.round((overlapEnd - overlapStart) / 86400000);
+    });
+
+    return { taskCount, totalDays };
 }
 
 function fmtCost(v) {
