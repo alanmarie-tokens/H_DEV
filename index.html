@@ -5284,6 +5284,18 @@ function createTaskBar(task, row) {
         tooltip.appendChild(_ttNotes);
     }
 
+    // Creator info (moved from bar dot to tooltip)
+    if (task.createdBy) {
+        const knownUser = _usersOnlineMap[task.createdBy];
+        const cName = knownUser?.name || userNameFromId(task.createdBy);
+        const cColor = knownUser?.color || userColorFromId(task.createdBy);
+        const isSelf = task.createdBy === _cachedClientId;
+        const _ttCreator = document.createElement('div');
+        _ttCreator.className = 'tt-row';
+        _ttCreator.innerHTML = `<span class="tt-lbl">Créé par</span><span class="tt-val" style="color:${cColor}">✍ ${cName}${isSelf ? ' (vous)' : ''}</span>`;
+        tooltip.appendChild(_ttCreator);
+    }
+
     bar.appendChild(tooltip);
     bar.addEventListener('mouseenter', () => { if (!dragMoved) tooltip.classList.add('visible'); });
     bar.addEventListener('mouseleave', () => { setTimeout(() => tooltip.classList.remove('visible'), 100); });
@@ -5308,25 +5320,27 @@ function createTaskBar(task, row) {
     }
 
     // ── Badge Bâtiment sur la barre ──
-    const _batsBar = Array.isArray(task.batiments) ? task.batiments.filter(Boolean) : [];
-    if (_batsBar.length > 0) {
-        const batBadge = document.createElement('span');
-        batBadge.className = 'task-bar-bat';
-        batBadge.textContent = _batsBar.length === 1 ? '🏢 ' + _batsBar[0] : '🏢 ' + _batsBar.length;
-        bar.insertBefore(batBadge, doneBtn);
-    }
+    // REMOVED: Badge takes too much space and info is already in tooltip
+    // const _batsBar = Array.isArray(task.batiments) ? task.batiments.filter(Boolean) : [];
+    // if (_batsBar.length > 0) {
+    //     const batBadge = document.createElement('span');
+    //     batBadge.className = 'task-bar-bat';
+    //     batBadge.textContent = _batsBar.length === 1 ? '🏢 ' + _batsBar[0] : '🏢 ' + _batsBar.length;
+    //     bar.insertBefore(batBadge, doneBtn);
+    // }
 
     // ── Creator dot (small colored circle at bottom-left) ──
-    if (task.createdBy) {
-        const cDot = document.createElement('div');
-        cDot.className = 'creator-dot';
-        const knownUser = _usersOnlineMap[task.createdBy];
-        cDot.style.background = knownUser?.color || userColorFromId(task.createdBy);
-        const cName = knownUser?.name || userNameFromId(task.createdBy);
-        const isSelf = task.createdBy === _cachedClientId;
-        cDot.title = 'Créé par : ' + cName + (isSelf ? ' (vous)' : '');
-        bar.appendChild(cDot);
-    }
+    // REMOVED: Secondary info, hard to see, already shown in tooltip
+    // if (task.createdBy) {
+    //     const cDot = document.createElement('div');
+    //     cDot.className = 'creator-dot';
+    //     const knownUser = _usersOnlineMap[task.createdBy];
+    //     cDot.style.background = knownUser?.color || userColorFromId(task.createdBy);
+    //     const cName = knownUser?.name || userNameFromId(task.createdBy);
+    //     const isSelf = task.createdBy === _cachedClientId;
+    //     cDot.title = 'Créé par : ' + cName + (isSelf ? ' (vous)' : '');
+    //     bar.appendChild(cDot);
+    // }
 
     // ── Note indicator dot ──
     if (task.notes) {
@@ -5337,14 +5351,15 @@ function createTaskBar(task, row) {
     }
 
     // ── Status icon (shown beside label) ──
-    if (statusDef) {
-        const sIcon = document.createElement('span');
-        sIcon.className = 'task-status-icon';
-        sIcon.textContent = statusDef.icon;
-        sIcon.style.color = statusDef.color;
-        sIcon.title = statusDef.label;
-        bar.insertBefore(sIcon, doneBtn);
-    }
+    // REMOVED: Redundant with status stripe on left edge
+    // if (statusDef) {
+    //     const sIcon = document.createElement('span');
+    //     sIcon.className = 'task-status-icon';
+    //     sIcon.textContent = statusDef.icon;
+    //     sIcon.style.color = statusDef.color;
+    //     sIcon.title = statusDef.label;
+    //     bar.insertBefore(sIcon, doneBtn);
+    // }
 
     // ── Progress bar (thin strip at bottom of bar) ──
     const pTrack = document.createElement('div');
@@ -5356,10 +5371,11 @@ function createTaskBar(task, row) {
     bar.appendChild(pFill);
 
     // ── % pill — always visible on bar ──
-    const pctPill = document.createElement('div');
-    pctPill.className = 'task-bar-pct-pill' + (progressPct <= 0 ? ' zero' : '');
-    pctPill.textContent = Math.round(progressPct) + '%';
-    bar.appendChild(pctPill);
+    // REMOVED: Redundant with progress bar visual and tooltip info
+    // const pctPill = document.createElement('div');
+    // pctPill.className = 'task-bar-pct-pill' + (progressPct <= 0 ? ' zero' : '');
+    // pctPill.textContent = Math.round(progressPct) + '%';
+    // bar.appendChild(pctPill);
 
     // Resize
     bar.addEventListener('mousedown', e => {
