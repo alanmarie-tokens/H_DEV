@@ -4989,22 +4989,15 @@ function renderBody() {
         // Group recap
         const recapCell = document.createElement('div');
         recapCell.className = 'group-recap-cell';
-        let gcost = 0, getpDays = 0, gdays = 0;
-        groupRows.forEach(row => {
-            row.tasks.forEach(t => {
-                const { days, cost, etp } = taskCost(t);
-                gcost += cost; getpDays += days * etp; gdays += days;
-            });
-        });
-        const gavgEtp = gdays > 0 ? getpDays / gdays : 0;
+        const { taskCount, totalDays } = groupPeriodStats(groupRows);
         recapCell.innerHTML = `
             <div class="group-stat">
-                <span class="gs-label">ETP</span>
-                <span class="gs-value${gavgEtp > 0 ? ' highlight' : ''}">${fmtEtp(gavgEtp)}</span>
+                <span class="gs-label">Tâches</span>
+                <span class="gs-value${taskCount > 0 ? ' highlight' : ''}">${taskCount}</span>
             </div>
             <div class="group-stat">
-                <span class="gs-label">Coût</span>
-                <span class="gs-value${gcost > 0 ? ' highlight' : ''}">${fmtCost(gcost)}</span>
+                <span class="gs-label">Jours</span>
+                <span class="gs-value${totalDays > 0 ? ' highlight' : ''}">${totalDays}</span>
             </div>`;
 
         headerDiv.append(labelCell, groupTrack, recapCell);
@@ -6443,6 +6436,19 @@ function rowPeriodStats(row) {
 
         taskCount += 1;
         totalDays += Math.round((overlapEnd - overlapStart) / 86400000);
+    });
+
+    return { taskCount, totalDays };
+}
+
+function groupPeriodStats(groupRows) {
+    let taskCount = 0;
+    let totalDays = 0;
+
+    groupRows.forEach(row => {
+        const stats = rowPeriodStats(row);
+        taskCount += stats.taskCount;
+        totalDays += stats.totalDays;
     });
 
     return { taskCount, totalDays };
