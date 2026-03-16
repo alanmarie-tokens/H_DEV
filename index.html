@@ -2440,6 +2440,31 @@
         }
         .sync-connecting .sync-dot { animation: pulse 1.2s infinite; }
         @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+        /* ── Online users presence indicator ── */
+        .online-users { display:flex; align-items:center; gap:4px; }
+        .user-avatar {
+            width:26px; height:26px; border-radius:50%;
+            display:flex; align-items:center; justify-content:center;
+            font-size:10px; font-weight:600; color:#fff; cursor:default;
+            border:2px solid var(--bg); transition:transform 0.12s;
+            flex-shrink:0;
+        }
+        .user-avatar:hover { transform:scale(1.2); z-index:10; }
+        .user-avatar.self { outline:2px solid var(--accent); outline-offset:1px; }
+        .creator-dot {
+            position:absolute; bottom:2px; left:3px;
+            width:8px; height:8px; border-radius:50%;
+            border:1.5px solid rgba(0,0,0,0.5); pointer-events:none; z-index:2;
+        }
+        .trt-creator { font-size:9px; color:var(--text-muted); margin-top:4px; font-family:var(--mono); }
+        .m-creator-info {
+            font-size:12px; color:var(--text-muted);
+            display:flex; align-items:center; gap:6px; padding:6px 0;
+        }
+        .m-creator-dot {
+            width:10px; height:10px; border-radius:50%; flex-shrink:0;
+        }
     </style>
 </head>
 <!-- Firebase Realtime Database SDK (loaded only when needed) -->
@@ -2466,6 +2491,7 @@
     <button class="nav-btn" id="btnSave" title="Sauvegarder (Ctrl+S)" style="border-color:var(--accent);color:var(--accent)">💾 Sauvegarder</button>
     <input type="file" id="importFileInput" accept=".json" style="display:none">
     <span id="syncStatus" class="sync-status" title="État de la synchronisation Firebase"></span>
+    <div id="onlineUsers" class="online-users" title="Utilisateurs connectés"></div>
     <button class="theme-btn" id="btnTheme" style="margin-left:auto" title="Basculer clair/sombre">🌙</button>
 </div>
 
@@ -2626,6 +2652,10 @@
         <div class="field">
             <label>Notes</label>
             <textarea id="mNotes" class="notes-textarea" placeholder="Contexte, détails, liens utiles…"></textarea>
+        </div>
+        <div class="field" id="mCreatorRow" style="display:none">
+            <label>Créé par</label>
+            <div class="m-creator-info"><div class="m-creator-dot" id="mCreatorDot"></div><span id="mCreatorName">—</span></div>
         </div>
         <div class="dep-section">
             <div class="dep-section-hdr">
@@ -3449,7 +3479,8 @@ function buildRowDiv(row, colW, trackW, isChild) {
             name: `Tâche ${taskNum}`,
             start: slot.start.toISOString().slice(0,10),
             end: slot.end.toISOString().slice(0,10),
-            color: row.color || TASK_COLORS[0]
+            color: row.color || TASK_COLORS[0],
+            createdBy: _cachedClientId || null
         };
         row.tasks.push(newTask);
 
@@ -3604,6 +3635,18 @@ function createTaskBar(task, row) {
     }
 
     bar.append(resL, lbl, doneBtn, del, resR);
+
+    // ── Creator dot (small colored circle at bottom-left) ──
+    if (task.createdBy) {
+        const cDot = document.createElement('div');
+        cDot.className = 'creator-dot';
+        const knownUser = _usersOnlineMap[task.createdBy];
+        cDot.style.background = knownUser?.color || userColorFromId(task.createdBy);
+        const cName = knownUser?.name || userNameFromId(task.createdBy);
+        const isSelf = task.createdBy === _cachedClientId;
+        cDot.title = 'Créé par : ' + cName + (isSelf ? ' (vous)' : '');
+        bar.appendChild(cDot);
+    }
 
     // ── Note indicator dot ──
     if (task.notes) {
@@ -4254,6 +4297,24 @@ function openModal(rowId, sd, ed, taskId = null) {
     buildColorPicker();
     buildStatusSelector(task?.status || null);
     document.getElementById('mNotes').value = task?.notes || '';
+
+    // Show creator info when editing an existing task that has createdBy
+    const creatorRow = document.getElementById('mCreatorRow');
+    const creatorName = document.getElementById('mCreatorName');
+    const creatorDot  = document.getElementById('mCreatorDot');
+    if (task?.createdBy) {
+        const creatorId = task.createdBy;
+        const knownUser = _usersOnlineMap[creatorId];
+        const name  = knownUser?.name  || userNameFromId(creatorId);
+        const color = knownUser?.color || userColorFromId(creatorId);
+        const isSelf = creatorId === _cachedClientId;
+        creatorName.textContent = name + (isSelf ? ' (vous)' : '');
+        creatorDot.style.background = color;
+        creatorRow.style.display = '';
+    } else {
+        creatorRow.style.display = 'none';
+    }
+
     document.getElementById('modalOverlay').classList.add('open');
     setTimeout(() => { document.getElementById('mTaskName').select(); }, 50);
     // Objectives toggle — show only if task already has objectives
@@ -4331,7 +4392,7 @@ document.getElementById('mCreate').addEventListener('click', () => {
         const etp = parseFloat(document.getElementById('mEtp').value) || 0;
         const progress = parseInt(document.getElementById('mProgress').value) || 0;
         const notes = document.getElementById('mNotes').value.trim() || null;
-        row.tasks.push({ id: taskIdCounter++, name, start, end, color: selectedColor, tjm, etp, progress, status: selectedStatus || null, notes, objectives: mergedObjectives });
+        row.tasks.push({ id: taskIdCounter++, name, start, end, color: selectedColor, tjm, etp, progress, status: selectedStatus || null, notes, objectives: mergedObjectives, createdBy: _cachedClientId || null });
     }
 
     document.getElementById('mStartDate').style.borderColor = '';
@@ -5468,11 +5529,16 @@ const FIREBASE_CONFIG = {
 // Chemins dans la Realtime Database (permet d'héberger plusieurs plannings dans un même projet)
 const DB_PLANNING_PATH = 'planning';
 const DB_USER_SETTINGS_PATH = 'userSettings'; // Pour stocker les préférences utilisateur
+const DB_PRESENCE_PATH = 'presence'; // Pour la présence en temps réel des utilisateurs
 
 // ─── ÉTAT FIREBASE ─────────────────────────────────────────────────────────
 let firebaseDB = null;
 let firebaseListenerActive = false; // Guard against duplicate listener registration
 let _cachedClientId = null; // Cache en mémoire pour éviter les appels répétés
+let _applyingRemote = false; // Guard to prevent auto-save loops during remote data apply
+let _currentUserName = null; // Display name of the current user
+let _usersOnlineMap = {}; // { clientId: { name, color, clientId, lastSeen } }
+let _presenceIntervalId = null; // Store interval ID to avoid duplicate presence intervals
 
 // Identifiant unique du navigateur courant (pour différencier les clients)
 // Stocké dans Firebase pour persistence multi-sessions
@@ -5543,6 +5609,32 @@ function applyRemoteData(data) {
         return;
     }
 
+    // Abort any in-progress drag or resize before replacing the rows/tasks references.
+    // If not aborted, stale object references in dragState would cause tasks to appear
+    // duplicated (once from Firebase data in the source row, once pushed to the target row).
+    if (dragMoved && dragState) {
+        console.log('⚠️ [Firebase] Annulation du déplacement en cours (mise à jour distante reçue)');
+        dragState.task.start = toYMD(dragState.origStart);
+        dragState.task.end   = toYMD(dragState.origEnd);
+        dragState.bar.classList.remove('dragging');
+        document.querySelectorAll('.gantt-row.drop-target').forEach(r => r.classList.remove('drop-target'));
+        document.querySelectorAll('.task-ghost').forEach(g => g.remove());
+        document.body.classList.remove('is-dragging');
+        dragState = null;
+        dragMoved = false;
+        removeSnapLine();
+        hideDragLabel();
+    }
+    if (resizeState) {
+        console.log('⚠️ [Firebase] Annulation du redimensionnement en cours (mise à jour distante reçue)');
+        resizeState.task.start = resizeState.anchorStart.toISOString().slice(0, 10);
+        resizeState.task.end   = resizeState.anchorEnd.toISOString().slice(0, 10);
+        document.body.classList.remove('is-resizing');
+        resizeState = null;
+        removeSnapLine();
+        hideDragLabel();
+    }
+
     console.log('🔵 [Firebase] Données distantes valides:', {
         rowsCount: data.rows.length,
         groupsCount: data.groups ? data.groups.length : 0,
@@ -5566,7 +5658,9 @@ function applyRemoteData(data) {
     console.log('✅ [Firebase] Variables locales mises à jour');
 
     console.log('🔵 [Firebase] Rendu de l\'interface...');
+    _applyingRemote = true;
     render();
+    _applyingRemote = false;
     updateSyncStatus('synced');
     showToast('🔄 Planning mis à jour (autre utilisateur)');
     console.log('✅ [Firebase] Application des données distantes terminée');
@@ -5859,6 +5953,91 @@ async function loadUserSetting(key, defaultValue = null) {
     }
 }
 
+// ─── GESTION DES UTILISATEURS EN LIGNE ──────────────────────────────────────
+// Noms et couleurs déterministes basés sur le clientId (pas de saisie utilisateur)
+const _USER_ADJECTIVES = ['Bleu','Vert','Rouge','Gris','Vif','Sage','Doux','Fort','Bref','Fin','Grand','Leste'];
+const _USER_NOUNS      = ['Loup','Renard','Aigle','Hibou','Ours','Tigre','Lynx','Cerf','Bison','Coyote','Puma','Faucon'];
+const _USER_COLORS     = ['#6366f1','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#14b8a6','#a78bfa','#fb923c'];
+
+function _hashStr(s) {
+    return s.split('').reduce((a, b) => { a = ((a << 5) - a) + b.charCodeAt(0); return a & a; }, 0);
+}
+
+function userNameFromId(clientId) {
+    const h = Math.abs(_hashStr(clientId || ''));
+    return _USER_ADJECTIVES[h % _USER_ADJECTIVES.length] + ' ' + _USER_NOUNS[(h >> 4) % _USER_NOUNS.length];
+}
+
+function userColorFromId(clientId) {
+    return _USER_COLORS[Math.abs(_hashStr(clientId || '')) % _USER_COLORS.length];
+}
+
+function getCreatorTooltipHtml(task) {
+    if (!task.createdBy) return '';
+    const kn = _usersOnlineMap[task.createdBy];
+    const nm = kn?.name || userNameFromId(task.createdBy);
+    return `<div class="trt-creator">✍ ${nm}</div>`;
+}
+
+async function startPresence() {
+    if (!firebaseDB || _presenceIntervalId !== null) return; // Guard: run once only
+    try {
+        const clientId = await getClientId();
+
+        // Use a stored display name or generate one deterministically
+        let name = await loadUserSetting('displayName');
+        if (!name) {
+            name = userNameFromId(clientId);
+            await saveUserSetting('displayName', name);
+        }
+        _currentUserName = name;
+
+        const color = userColorFromId(clientId);
+        const presenceRef = firebaseDB.ref(`${DB_PRESENCE_PATH}/${clientId}`);
+
+        // Remove this user's presence entry on disconnect
+        presenceRef.onDisconnect().remove();
+
+        // Write current presence
+        await presenceRef.set({ name, color, clientId, lastSeen: Date.now() });
+        console.log('✅ [Présence] Présence enregistrée:', name, '(', clientId, ')');
+
+        // Refresh lastSeen every 30 s so stale entries can be detected
+        _presenceIntervalId = setInterval(() => { if (firebaseDB) presenceRef.update({ lastSeen: Date.now() }); }, 30000);
+
+        // Reactively update the online-users UI
+        firebaseDB.ref(DB_PRESENCE_PATH).on('value', snapshot => {
+            _usersOnlineMap = snapshot.val() || {};
+            renderOnlineUsers();
+        });
+    } catch (e) {
+        console.error('❌ [Présence] Erreur lors de l\'enregistrement de la présence:', e);
+    }
+}
+
+function renderOnlineUsers() {
+    const container = document.getElementById('onlineUsers');
+    if (!container) return;
+    container.innerHTML = '';
+    const users = Object.values(_usersOnlineMap);
+    // Self first, then alphabetical
+    users.sort((a, b) => {
+        if (a.clientId === _cachedClientId) return -1;
+        if (b.clientId === _cachedClientId) return 1;
+        return (a.name || '').localeCompare(b.name || '');
+    });
+    users.forEach(user => {
+        const isSelf = user.clientId === _cachedClientId;
+        const avatar = document.createElement('div');
+        avatar.className = 'user-avatar' + (isSelf ? ' self' : '');
+        avatar.style.background = user.color || userColorFromId(user.clientId || '');
+        const initials = (user.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
+        avatar.textContent = initials;
+        avatar.title = (user.name || user.clientId || 'Utilisateur') + (isSelf ? ' (vous)' : '');
+        container.appendChild(avatar);
+    });
+}
+
 // Auto-save on every render (debounced)
 let saveTimer = null;
 function renderExtras() {
@@ -5868,8 +6047,10 @@ function renderExtras() {
     renderHistogram();
     if (typeof detectOverloads === 'function') detectOverloads();
     if (typeof applyHolidayMarkings === 'function') applyHolidayMarkings();
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(saveToStorage, 400);
+    if (!_applyingRemote) {
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(saveToStorage, 400);
+    }
 }
 
 // ─── LIGHT / DARK MODE ───────────────────────────────────
@@ -6057,7 +6238,8 @@ createTaskBar = function(task, row) {
             ${etp > 0 ? `<div class="trt-row"><span class="trt-key">ETP</span><span class="trt-val hi">${etp} ETP</span></div>` : ''}
             ${cost > 0 ? `<div class="trt-row"><span class="trt-key">Coût</span><span class="trt-val hi">${fmtCost(cost)}</span></div>` : ''}
             <div class="trt-pbar"><div class="trt-pfill" style="width:${task.progress || 0}%"></div></div>
-            <div style="font-size:9px;color:var(--text-muted);margin-top:3px;font-family:var(--mono)">${task.progress || 0}% — double-clic pour éditer</div>`;
+            <div style="font-size:9px;color:var(--text-muted);margin-top:3px;font-family:var(--mono)">${task.progress || 0}% — double-clic pour éditer</div>
+            ${getCreatorTooltipHtml(task)}`;
         bar.appendChild(tip);
         bar.addEventListener('mouseenter', () => { if (!dragMoved) tip.classList.add('visible'); });
         bar.addEventListener('mouseleave', () => setTimeout(() => tip.classList.remove('visible'), 100));
@@ -6470,11 +6652,16 @@ document.addEventListener('keydown', e => {
     updateUndoButtons();
 
     // Start real-time listener AFTER initial load to avoid race conditions
-    console.log('🔵 [Application] Étape 5/5: Démarrage du listener temps réel Firebase');
+    console.log('🔵 [Application] Étape 5/6: Démarrage du listener temps réel Firebase');
     await startFirebaseListener();
+
+    // Register presence (non-blocking — failures don't affect the app)
+    console.log('🔵 [Application] Étape 6/6: Enregistrement de la présence utilisateur');
+    await startPresence();
 
     console.log('═══════════════════════════════════════════════════════');
     console.log('✅ [Application] Initialisation terminée avec succès!');
+    console.log('✅ [Application] Utilisateur:', _currentUserName || '(chargement…)');
     console.log('═══════════════════════════════════════════════════════');
 })();
 </script>
