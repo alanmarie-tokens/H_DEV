@@ -51,8 +51,8 @@
         :root { --recap-w: 200px; }
 
         .row-recap {
-            min-width: 132px;
-            width: max-content;
+            min-width: var(--recap-w);
+            width: var(--recap-w);
             border-left: 1px solid var(--border);
             display: flex;
             flex-direction: column;
@@ -4753,11 +4753,34 @@ function pctToDate(pct) {
     return new Date(vs + pct * (ve - vs));
 }
 
+function syncRecapWidthFromContent() {
+    const minRecapW = 132;
+    const root = document.documentElement;
+    const recapNodes = document.querySelectorAll('.row-recap, .group-recap-cell');
+
+    let measured = minRecapW;
+    recapNodes.forEach(el => {
+        measured = Math.max(measured, Math.ceil(el.scrollWidth));
+    });
+
+    const current = parseFloat(getComputedStyle(root).getPropertyValue('--recap-w')) || minRecapW;
+    if (Math.abs(measured - current) < 1) return false;
+
+    root.style.setProperty('--recap-w', measured + 'px');
+    return true;
+}
+
 // ─── RENDER ──────────────────────────────────────────────────────────────────
 function render() {
     computeView();
     renderHeader();
     renderBody();
+    if (syncRecapWidthFromContent()) {
+        // Width changed: redraw header/body so timeline and rows stay perfectly aligned.
+        computeView();
+        renderHeader();
+        renderBody();
+    }
     updatePeriodDisplay();
     updateTotalsBar();
     renderBacklog();
