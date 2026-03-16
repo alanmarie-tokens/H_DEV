@@ -1524,6 +1524,270 @@
             z-index: 20;
         }
         .task-bar:hover .task-bar-progress-badge { opacity: 1; }
+
+        /* ─── TAGS BÂTIMENTS dans le modal ─── */
+        .batiment-tags-wrap {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            min-height: 32px;
+            padding: 5px 8px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            cursor: text;
+            transition: border-color 0.12s;
+            align-items: center;
+        }
+        .batiment-tags-wrap:focus-within { border-color: var(--accent); }
+
+        .batiment-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: var(--accent-dim);
+            border: 1px solid rgba(99,102,241,0.35);
+            color: var(--accent);
+            font-size: 11px;
+            font-family: var(--font);
+            padding: 2px 7px;
+            border-radius: 10px;
+            white-space: nowrap;
+        }
+        .batiment-tag-del {
+            background: none;
+            border: none;
+            color: var(--accent);
+            cursor: pointer;
+            font-size: 13px;
+            line-height: 1;
+            padding: 0;
+            opacity: 0.7;
+            transition: opacity 0.1s;
+        }
+        .batiment-tag-del:hover { opacity: 1; }
+
+        .batiment-input {
+            background: transparent;
+            border: none;
+            color: var(--text);
+            font-size: 12px;
+            font-family: var(--font);
+            outline: none;
+            min-width: 120px;
+            flex: 1;
+        }
+        .batiment-input::placeholder { color: var(--text-muted); }
+
+        /* ─── FILTER CHIPS bâtiments (dynamiques) ─── */
+        .filter-bat-chips {
+            display: flex;
+            gap: 4px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        .filter-bat-label {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
+        /* ─── BADGE BÂTIMENT sur la barre ─── */
+        .task-bar-bat {
+            font-size: 9px;
+            font-weight: 500;
+            font-family: var(--font);
+            color: rgba(255,255,255,0.88);
+            background: rgba(0,0,0,0.28);
+            padding: 1px 5px;
+            border-radius: 6px;
+            white-space: nowrap;
+            pointer-events: none;
+            flex-shrink: 0;
+            max-width: 80px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 3;
+        }
+
+        /* ─── BADGE MÉTIER sur la barre ─── */
+        .task-bar-metier {
+            font-size: 9px;
+            font-weight: 600;
+            font-family: var(--mono);
+            letter-spacing: 0.04em;
+            padding: 1px 5px;
+            border-radius: 6px;
+            white-space: nowrap;
+            flex-shrink: 0;
+            pointer-events: none;
+            max-width: 70px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            z-index: 3;
+            opacity: 0.92;
+        }
+
+        /* ─── % PILL visible sur la barre ─── */
+        .task-bar-pct-pill {
+            position: absolute;
+            right: 7px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-size: 9px;
+            font-family: var(--mono);
+            font-weight: 600;
+            color: rgba(255,255,255,0.92);
+            background: rgba(0,0,0,0.32);
+            padding: 1px 5px;
+            border-radius: 8px;
+            pointer-events: none;
+            white-space: nowrap;
+            z-index: 3;
+            transition: opacity 0.12s;
+        }
+        .task-bar:hover .task-bar-pct-pill { opacity: 0; }
+        .task-bar-pct-pill.zero { opacity: 0; }
+
+        /* ─── RICH TOOLTIP ─── */
+        .task-rich-tooltip {
+            min-width: 220px;
+            max-width: 300px;
+            pointer-events: none;
+        }
+        .task-rich-tooltip.tt-interactive { pointer-events: auto; }
+        .tt-task-name {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 9px;
+            line-height: 1.3;
+            padding-bottom: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .tt-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 4px;
+        }
+        .tt-lbl {
+            font-size: 10px;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            white-space: nowrap;
+        }
+        .tt-val {
+            font-size: 11px;
+            font-family: var(--mono);
+            color: var(--text-soft);
+            text-align: right;
+        }
+        .tt-val.tt-accent { color: var(--accent); }
+        .tt-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 7px 0;
+        }
+        .tt-progress-wrap { margin-top: 2px; }
+        .tt-prog-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .tt-prog-bar-bg {
+            height: 4px;
+            background: rgba(255,255,255,0.08);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .tt-prog-bar-fill {
+            height: 100%;
+            background: var(--accent);
+            border-radius: 4px;
+            transition: width 0.3s;
+        }
+        .tt-prog-bar-fill.complete { background: var(--success); }
+        .tt-notes-block {
+            font-size: 10px;
+            color: var(--text-dim);
+            margin-top: 7px;
+            font-style: italic;
+            line-height: 1.4;
+            border-top: 1px solid var(--border);
+            padding-top: 6px;
+        }
+
+        /* ─── MINI-CALENDRIER ─── */
+        .mini-cal-popup {
+            position: fixed;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            z-index: 600;
+            padding: 12px;
+            min-width: 210px;
+            animation: miniCalIn 0.15s ease;
+        }
+        @keyframes miniCalIn {
+            from { opacity: 0; transform: translateY(-6px); }
+            to   { opacity: 1; transform: none; }
+        }
+        .mini-cal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            gap: 6px;
+        }
+        .mini-cal-year {
+            font-size: 13px;
+            font-weight: 600;
+            font-family: var(--mono);
+            color: var(--text-soft);
+            flex: 1;
+            text-align: center;
+        }
+        .mini-cal-nav {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 12px;
+            padding: 2px 8px;
+            border-radius: 4px;
+            transition: color 0.12s, border-color 0.12s;
+            font-family: var(--font);
+        }
+        .mini-cal-nav:hover { color: var(--text); border-color: var(--text-muted); }
+        .mini-cal-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 4px;
+        }
+        .mini-cal-month {
+            padding: 6px 4px;
+            border-radius: 5px;
+            font-size: 11px;
+            font-family: var(--font);
+            color: var(--text-dim);
+            cursor: pointer;
+            text-align: center;
+            transition: background 0.1s, color 0.1s;
+            border: 1px solid transparent;
+            background: none;
+        }
+        .mini-cal-month:hover { background: var(--surface3); color: var(--text); }
+        .mini-cal-month.mcal-current { color: var(--accent); border-color: rgba(99,102,241,0.4); font-weight: 600; }
+        .mini-cal-month.mcal-today { background: var(--accent-dim); }
+
         /* section avancement dans le modal */
         .progress-section {
             margin-bottom: 13px;
@@ -2515,7 +2779,6 @@
         </div>
         <div class="sep"></div>
         <button class="nav-btn" id="btnAddGroup">+ Groupe</button>
-        <button class="nav-btn" id="btnGroupMetier" title="Grouper par métier">⊞ Par métier</button>
         <button class="nav-btn" id="btnAddMilestone" title="Ajouter un jalon">◆ Jalon</button>
         <button class="nav-btn" id="btnToggleHistogram" title="Histogramme de charge">📊 Charge</button>
         <button class="nav-btn" id="btnToggleFilter" title="Filtres">🔍 Filtres</button>
@@ -2531,9 +2794,10 @@
     <span class="filter-sep"></span>
     <button class="filter-chip" id="fStTodo"        data-us="todo">○ À faire</button>
     <button class="filter-chip" id="fStInProgress"  data-us="in_progress">◑ En cours</button>
-    <button class="filter-chip" id="fStReview"      data-us="review">◎ En review</button>
-    <button class="filter-chip" id="fStBlocked"     data-us="blocked">⊘ Bloqué</button>
     <button class="filter-chip" id="fStDone"        data-us="done_status">● Terminé</button>
+    <span class="filter-sep"></span>
+    <span class="filter-bat-label">🏢</span>
+    <div class="filter-bat-chips" id="filterBatChips"></div>
     <span class="filter-count" id="filterCount"></span>
     <button class="filter-clear" id="filterClear">✕ Réinitialiser</button>
 </div>
@@ -2596,6 +2860,18 @@
         <div class="field">
             <label>Nom de la tâche</label>
             <input type="text" id="mTaskName" placeholder="Ex: Phase de conception">
+        </div>
+        <div class="field" style="position:relative">
+            <label>Métier</label>
+            <input type="text" id="mMetier" placeholder="Ex: Électricité, Plomberie…" autocomplete="off">
+            <div id="mMetierSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-md);z-index:9999;overflow:hidden;"></div>
+        </div>
+        <div class="field" style="position:relative">
+            <label>Bâtiments</label>
+            <div class="batiment-tags-wrap" id="mBatimentsWrap">
+                <input class="batiment-input" id="mBatimentInput" placeholder="Ajouter un bâtiment…" autocomplete="off">
+            </div>
+            <div id="mBatimentSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-md);z-index:9999;overflow:hidden;margin-top:2px;"></div>
         </div>
         <div class="form-row">
             <div class="field">
@@ -2722,11 +2998,9 @@ const TASK_COLORS = [
 ];
 
 const TASK_STATUSES = [
-    { id: 'todo',        label: 'À faire',   color: '#71717a', icon: '○' },
-    { id: 'in_progress', label: 'En cours',  color: '#6366f1', icon: '◑' },
-    { id: 'review',      label: 'En review', color: '#f59e0b', icon: '◎' },
-    { id: 'blocked',     label: 'Bloqué',    color: '#ef4444', icon: '⊘' },
-    { id: 'done',        label: 'Terminé',   color: '#22c55e', icon: '●' },
+    { id: 'todo',        label: 'À faire',  color: '#71717a', icon: '○' },
+    { id: 'in_progress', label: 'En cours', color: '#6366f1', icon: '◑' },
+    { id: 'done',        label: 'Terminé',  color: '#22c55e', icon: '●' },
 ];
 
 const ZOOM_CONFIG = {
@@ -2751,7 +3025,37 @@ let groupIdCounter = 3;
 // ── METIER HELPERS ──────────────────────────────────────────────────────────
 // Returns list of unique metiers currently defined across rows
 function allMetiers() {
-    return [...new Set(rows.map(r => r.metier || '').filter(Boolean))];
+    const set = new Set();
+    rows.forEach(r => r.tasks.forEach(t => { if (t.metier) set.add(t.metier); }));
+    return [...set];
+}
+
+function allBatiments() {
+    const set = new Set();
+    rows.forEach(r => r.tasks.forEach(t => {
+        if (Array.isArray(t.batiments)) t.batiments.forEach(b => { if (b) set.add(b); });
+    }));
+    return [...set].sort();
+}
+
+// Couleur déterministe pour un bâtiment (palette distincte de celle des métiers)
+const BATIMENT_PALETTE = [
+    { bg: '#1a2e3d', fg: '#38bdf8' },
+    { bg: '#1e3a5f', fg: '#60a5fa' },
+    { bg: '#1a3d2e', fg: '#34d399' },
+    { bg: '#2d2010', fg: '#fbbf24' },
+    { bg: '#3b1f5e', fg: '#c084fc' },
+    { bg: '#3d1a2a', fg: '#f472b6' },
+    { bg: '#1f2f1a', fg: '#86efac' },
+    { bg: '#2d1a10', fg: '#fb923c' },
+    { bg: '#1e1e2e', fg: '#a5b4fc' },
+    { bg: '#232323', fg: '#94a3b8' },
+];
+function batimentColor(name) {
+    if (!name) return BATIMENT_PALETTE[0];
+    let hash = 0;
+    for (let i = 0; i < name.length; i++) hash = (hash * 37 + name.charCodeAt(i)) & 0xffff;
+    return BATIMENT_PALETTE[hash % BATIMENT_PALETTE.length];
 }
 // Assign a consistent accent color to a metier string (deterministic)
 const METIER_PALETTE = [
@@ -2783,7 +3087,6 @@ let selectedColor = TASK_COLORS[0];
 let dragState = null;
 let resizeState = null;
 let dragMoved = false;
-let groupByMetier = false;
 
 const today = new Date();
 today.setHours(0,0,0,0);
@@ -3210,69 +3513,10 @@ function renderBody() {
         container.className = 'group-rows-container' + (group.collapsed ? ' collapsed' : '');
         container.dataset.groupId = group.id;
 
-        if (groupByMetier && groupRows.length > 0) {
-            // Sous-groupes par métier à l'intérieur du groupe
-            const metierMap = {};
-            const noMetierRows = [];
-            groupRows.forEach(row => {
-                const m = (row.metier || '').trim();
-                if (m) {
-                    if (!metierMap[m]) metierMap[m] = [];
-                    metierMap[m].push(row);
-                } else {
-                    noMetierRows.push(row);
-                }
-            });
-
-            Object.entries(metierMap).forEach(([mName, mRows]) => {
-                const col = metierColor(mName);
-                // Sous-en-tête métier
-                const subHdr = document.createElement('div');
-                subHdr.className = 'metier-subgroup-header';
-                const subDot = document.createElement('span');
-                subDot.className = 'metier-subgroup-dot';
-                if (col) subDot.style.background = col.fg;
-                const subName = document.createElement('span');
-                subName.textContent = mName;
-                subName.style.color = col ? col.fg : 'var(--text-dim)';
-                const subCount = document.createElement('span');
-                subCount.className = 'metier-subgroup-count';
-                subCount.textContent = mRows.length + ' ligne' + (mRows.length > 1 ? 's' : '');
-                subHdr.append(subDot, subName, subCount);
-                container.appendChild(subHdr);
-
-                mRows.forEach(row => {
-                    const rowDiv = buildRowDiv(row, colW, trackW, true);
-                    container.appendChild(rowDiv);
-                });
-            });
-
-            // Lignes sans métier → sous-groupe "Non attribué"
-            if (noMetierRows.length > 0) {
-                const subHdr = document.createElement('div');
-                subHdr.className = 'metier-subgroup-header unassigned';
-                const subDot = document.createElement('span');
-                subDot.className = 'metier-subgroup-dot';
-                subDot.style.background = 'var(--text-muted)';
-                const subName = document.createElement('span');
-                subName.textContent = 'Non attribué';
-                subName.style.color = 'var(--text-muted)';
-                const subCount = document.createElement('span');
-                subCount.className = 'metier-subgroup-count';
-                subCount.textContent = noMetierRows.length + ' ligne' + (noMetierRows.length > 1 ? 's' : '');
-                subHdr.append(subDot, subName, subCount);
-                container.appendChild(subHdr);
-                noMetierRows.forEach(row => {
-                    const rowDiv = buildRowDiv(row, colW, trackW, true);
-                    container.appendChild(rowDiv);
-                });
-            }
-        } else {
-            groupRows.forEach(row => {
+        groupRows.forEach(row => {
                 const rowDiv = buildRowDiv(row, colW, trackW, true);
                 container.appendChild(rowDiv);
             });
-        }
 
         body.appendChild(container);
     });
@@ -3302,119 +3546,12 @@ function buildRowDiv(row, colW, trackW, isChild) {
     inp.placeholder = 'Nom de la ligne…';
     inp.addEventListener('change', e => { row.name = e.target.value; });
 
-    // Metier badge + inline editor
-    const metierVal = row.metier || '';
-    const mCol = metierColor(metierVal);
-    const mBadge = document.createElement('span');
-    mBadge.className = 'row-metier-badge' + (metierVal ? '' : ' empty');
-    if (metierVal && mCol) {
-        mBadge.textContent = metierVal;
-        mBadge.style.background = mCol.bg;
-        mBadge.style.color = mCol.fg;
-        mBadge.style.borderColor = mCol.fg + '44';
-    } else {
-        mBadge.textContent = '+ métier';
-    }
-
-    const mInp = document.createElement('input');
-    mInp.type = 'text';
-    mInp.className = 'row-metier-input';
-    mInp.value = metierVal;
-    mInp.placeholder = 'Ex: Tech, Design…';
-
-    // Autocomplete suggestions dropdown (appended to body to avoid clipping)
-    let mSuggest = null;
-
-    // Refreshes badge display after a selection without full re-render
-    function applyMetier(val) {
-        row.metier = val;
-        const col = metierColor(val);
-        if (val && col) {
-            mBadge.textContent = val;
-            mBadge.style.background = col.bg;
-            mBadge.style.color = col.fg;
-            mBadge.style.borderColor = col.fg + '44';
-            mBadge.classList.remove('empty');
-        } else {
-            mBadge.textContent = '+ métier';
-            mBadge.style.background = '';
-            mBadge.style.color = '';
-            mBadge.style.borderColor = '';
-            mBadge.classList.add('empty');
-        }
-        mInp.value = val;
-        mInp.classList.remove('visible');
-        mBadge.style.display = '';
-        closeSuggest();
-    }
-
-    function openSuggest() {
-        closeSuggest();
-        const allOpts = allMetiers();
-        const typedVal = mInp.value.toLowerCase();
-        const filtered = typedVal ? allOpts.filter(m => m.toLowerCase().includes(typedVal)) : allOpts;
-        if (filtered.length === 0) return;
-        mSuggest = document.createElement('div');
-        mSuggest.className = 'metier-suggestions';
-        const rect = mInp.getBoundingClientRect();
-        mSuggest.style.cssText = `position:fixed;top:${rect.bottom + 2}px;left:${rect.left}px;min-width:${Math.max(rect.width, 150)}px;z-index:9999;`;
-        const hdr = document.createElement('div');
-        hdr.className = 'metier-suggestions-header';
-        hdr.textContent = 'Métiers existants';
-        mSuggest.appendChild(hdr);
-        filtered.forEach(s => {
-            const isCurrent = s === row.metier;
-            const col = metierColor(s);
-            const item = document.createElement('div');
-            item.className = 'metier-suggestion-item' + (isCurrent ? ' current' : '');
-            const dotEl = document.createElement('span');
-            dotEl.className = 'metier-suggestion-dot';
-            if (col) dotEl.style.background = col.fg;
-            const lblEl = document.createElement('span');
-            lblEl.textContent = s;
-            item.appendChild(dotEl);
-            item.appendChild(lblEl);
-            if (isCurrent) {
-                const chk = document.createElement('span');
-                chk.className = 'metier-suggestion-check';
-                chk.textContent = '✓';
-                item.appendChild(chk);
-            }
-            // Use pointerdown + preventDefault to prevent blur on input
-            // Then update badge directly without re-rendering the whole DOM
-            item.addEventListener('pointerdown', e => {
-                e.preventDefault();
-                e.stopPropagation();
-                applyMetier(isCurrent ? '' : s);
-            });
-            mSuggest.appendChild(item);
-        });
-        if (mSuggest.children.length > 1) document.body.appendChild(mSuggest);
-    }
-    function closeSuggest() { if (mSuggest) { mSuggest.remove(); mSuggest = null; } }
-
-    mBadge.addEventListener('click', e => {
-        e.stopPropagation();
-        mBadge.style.display = 'none';
-        mInp.classList.add('visible');
-        mInp.focus(); mInp.select();
-        openSuggest();
-    });
-    mInp.addEventListener('input', openSuggest);
-    mInp.addEventListener('keydown', e => {
-        if (e.key === 'Enter') { applyMetier(mInp.value.trim()); }
-        else if (e.key === 'Escape') { closeSuggest(); mInp.classList.remove('visible'); mBadge.style.display = ''; }
-    });
-    mInp.addEventListener('blur', () => {
-        setTimeout(() => { if (!mSuggest) { applyMetier(mInp.value.trim()); } }, 200);
-    });
-
     const del = document.createElement('button');
     del.className = 'row-del';
     del.textContent = '×';
     del.title = 'Supprimer la ligne';
     del.addEventListener('click', () => { pushUndo(); rows = rows.filter(r => r.id !== row.id); render(); });
-    lbl.append(dot, inp, mBadge, mInp, del);
+    lbl.append(dot, inp, del);
 
     // Track
     const track = document.createElement('div');
@@ -3583,94 +3720,8 @@ function createTaskBar(task, row) {
     const resR = document.createElement('div');
     resR.className = 'resize-handle right';
 
-    // Tooltip for objectives
-    let tooltip = null;
-    if (hasObj) {
-        tooltip = document.createElement('div');
-        tooltip.className = 'task-tooltip';
-        const title = document.createElement('div');
-        title.className = 'task-tooltip-title';
-        title.textContent = 'Objectifs';
-        tooltip.appendChild(title);
-
-        task.objectives.forEach(obj => {
-            const item = document.createElement('div');
-            item.className = 'tt-obj-item';
-            const nameLine = document.createElement('div');
-            nameLine.className = 'tt-obj-name';
-            nameLine.textContent = obj.name || '(sans nom)';
-            item.appendChild(nameLine);
-
-            if (obj.start !== null && obj.start !== undefined && obj.target !== null && obj.target !== undefined) {
-                const vals = document.createElement('div');
-                vals.className = 'tt-obj-vals';
-                vals.innerHTML = `<span>${obj.start}</span><span class="tt-arrow">→</span><span class="tt-current">${obj.current ?? '—'}</span><span class="tt-arrow">→</span><span>${obj.target}</span>`;
-                item.appendChild(vals);
-
-                if (obj.current !== null && obj.current !== undefined) {
-                    const range = obj.target - obj.start;
-                    const pct = range !== 0 ? Math.max(0, Math.min(100, ((obj.current - obj.start) / range) * 100)) : 0;
-                    const barEl = document.createElement('div');
-                    barEl.className = 'tt-bar';
-                    const fillEl = document.createElement('div');
-                    fillEl.className = 'tt-fill';
-                    fillEl.style.width = pct + '%';
-                    barEl.appendChild(fillEl);
-                    item.appendChild(barEl);
-                }
-            }
-            tooltip.appendChild(item);
-        });
-
-        // History button inside tooltip
-        const histBtn = document.createElement('button');
-        histBtn.style.cssText = 'margin-top:8px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:#6366f1;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:Geist,system-ui,sans-serif;width:100%;pointer-events:auto;';
-        histBtn.textContent = '📋 Voir l\'historique';
-        histBtn.addEventListener('click', e => { e.stopPropagation(); openHistPanel(task); });
-        tooltip.appendChild(histBtn);
-
-        bar.appendChild(tooltip);
-        bar.addEventListener('mouseenter', () => { if (!dragMoved) tooltip.classList.add('visible'); });
-        bar.addEventListener('mouseleave', () => { setTimeout(() => tooltip.classList.remove('visible'), 100); });
-    }
-
-    bar.append(resL, lbl, doneBtn, del, resR);
-
-    // ── Creator dot (small colored circle at bottom-left) ──
-    if (task.createdBy) {
-        const cDot = document.createElement('div');
-        cDot.className = 'creator-dot';
-        const knownUser = _usersOnlineMap[task.createdBy];
-        cDot.style.background = knownUser?.color || userColorFromId(task.createdBy);
-        const cName = knownUser?.name || userNameFromId(task.createdBy);
-        const isSelf = task.createdBy === _cachedClientId;
-        cDot.title = 'Créé par : ' + cName + (isSelf ? ' (vous)' : '');
-        bar.appendChild(cDot);
-    }
-
-    // ── Note indicator dot ──
-    if (task.notes) {
-        const noteDot = document.createElement('div');
-        noteDot.className = 'task-bar-note-dot';
-        noteDot.title = task.notes.length > 60 ? task.notes.slice(0, 60) + '…' : task.notes;
-        bar.appendChild(noteDot);
-    }
-
-    // ── Status icon (shown beside label) ──
-    if (statusDef) {
-        const sIcon = document.createElement('span');
-        sIcon.className = 'task-status-icon';
-        sIcon.textContent = statusDef.icon;
-        sIcon.style.color = statusDef.color;
-        sIcon.title = statusDef.label;
-        // Insert before doneBtn
-        bar.insertBefore(sIcon, doneBtn);
-    }
-
-    // ── Progress bar ──
-    // Priority 1: manual progress set by user (task.progress)
-    // Priority 2: avg of objectives progress
-    // Priority 3: time-based progress
+    // ── Progress computation (done early so tooltip can use it) ──
+    // Priority 1: manual progress, 2: avg objectives, 3: time-based
     let progressPct = null;
     let progressIsManual = false;
 
@@ -3700,6 +3751,210 @@ function createTaskBar(task, row) {
         else progressPct = 0;
     }
 
+    // ── Rich tooltip (shown for ALL tasks) ───────────────────────────────────
+    const { days: _tDays, cost: _tCost } = taskCost(task);
+    const _fmtD = s => new Date(s).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' });
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'task-tooltip task-rich-tooltip' + (hasObj ? ' tt-interactive' : '');
+
+    // Name
+    const _ttName = document.createElement('div');
+    _ttName.className = 'tt-task-name';
+    _ttName.textContent = task.name;
+    tooltip.appendChild(_ttName);
+
+    // Dates
+    const _ttDates = document.createElement('div');
+    _ttDates.className = 'tt-row';
+    _ttDates.innerHTML = `<span class="tt-lbl">Dates</span><span class="tt-val">${_fmtD(task.start)} → ${_fmtD(task.end)}</span>`;
+    tooltip.appendChild(_ttDates);
+
+    // Duration
+    const _ttDur = document.createElement('div');
+    _ttDur.className = 'tt-row';
+    _ttDur.innerHTML = `<span class="tt-lbl">Durée</span><span class="tt-val">${_tDays} j. ouvrés</span>`;
+    tooltip.appendChild(_ttDur);
+
+    // ETP
+    const _etp = parseFloat(task.etp) || 0;
+    const _tjm = parseFloat(task.tjm) || 0;
+    if (_etp > 0) {
+        const _ttEtp = document.createElement('div');
+        _ttEtp.className = 'tt-row';
+        _ttEtp.innerHTML = `<span class="tt-lbl">ETP</span><span class="tt-val">${_etp} ETP</span>`;
+        tooltip.appendChild(_ttEtp);
+    }
+    if (_tjm > 0 && _tCost > 0) {
+        const _ttCost = document.createElement('div');
+        _ttCost.className = 'tt-row';
+        _ttCost.innerHTML = `<span class="tt-lbl">Coût est.</span><span class="tt-val tt-accent">${fmtCost(_tCost)}</span>`;
+        tooltip.appendChild(_ttCost);
+    }
+
+    // Status
+    if (statusDef) {
+        const _ttSt = document.createElement('div');
+        _ttSt.className = 'tt-row';
+        _ttSt.innerHTML = `<span class="tt-lbl">Statut</span><span class="tt-val" style="color:${statusDef.color}">${statusDef.icon} ${statusDef.label}</span>`;
+        tooltip.appendChild(_ttSt);
+    }
+
+    // Métier
+    if (task.metier) {
+        const mCol = metierColor(task.metier);
+        const _ttMet = document.createElement('div');
+        _ttMet.className = 'tt-row';
+        _ttMet.innerHTML = `<span class="tt-lbl">Métier</span><span class="tt-val" style="color:${mCol ? mCol.fg : 'var(--text-soft)'}">${task.metier}</span>`;
+        tooltip.appendChild(_ttMet);
+    }
+
+    // Bâtiments
+    const _bats = Array.isArray(task.batiments) ? task.batiments.filter(Boolean) : [];
+    if (_bats.length > 0) {
+        const _ttBatDiv = document.createElement('div'); _ttBatDiv.className = 'tt-divider';
+        tooltip.appendChild(_ttBatDiv);
+        const _ttBatTitle = document.createElement('div');
+        _ttBatTitle.className = 'tt-lbl';
+        _ttBatTitle.style.cssText = 'margin-bottom:5px;';
+        _ttBatTitle.textContent = '🏢 Bâtiments';
+        tooltip.appendChild(_ttBatTitle);
+        _bats.forEach(b => {
+            const col = batimentColor(b);
+            const _ttBatRow = document.createElement('div');
+            _ttBatRow.style.cssText = `display:inline-flex;align-items:center;gap:4px;background:${col.bg};border:1px solid ${col.fg}33;color:${col.fg};font-size:10px;padding:2px 7px;border-radius:8px;margin:2px 2px 0 0;`;
+            _ttBatRow.textContent = b;
+            tooltip.appendChild(_ttBatRow);
+        });
+    }
+
+    // Progress bar in tooltip
+    const _ttDiv = document.createElement('div'); _ttDiv.className = 'tt-divider';
+    tooltip.appendChild(_ttDiv);
+    const _ttProgWrap = document.createElement('div');
+    _ttProgWrap.className = 'tt-progress-wrap';
+    const _ttProgLbl = document.createElement('div');
+    _ttProgLbl.className = 'tt-prog-label-row';
+    _ttProgLbl.innerHTML = `<span class="tt-lbl">Avancement</span><span class="tt-val tt-accent">${Math.round(progressPct)}%${progressIsManual ? '' : ' · auto'}</span>`;
+    const _ttProgBg = document.createElement('div'); _ttProgBg.className = 'tt-prog-bar-bg';
+    const _ttProgFill = document.createElement('div');
+    _ttProgFill.className = 'tt-prog-bar-fill' + (progressPct >= 100 ? ' complete' : '');
+    _ttProgFill.style.width = Math.min(100, progressPct) + '%';
+    _ttProgBg.appendChild(_ttProgFill);
+    _ttProgWrap.append(_ttProgLbl, _ttProgBg);
+    tooltip.appendChild(_ttProgWrap);
+
+    // Objectives section (if any)
+    if (hasObj) {
+        const _ttObjDiv = document.createElement('div'); _ttObjDiv.className = 'tt-divider';
+        tooltip.appendChild(_ttObjDiv);
+        const _ttObjTitle = document.createElement('div');
+        _ttObjTitle.className = 'task-tooltip-title';
+        _ttObjTitle.textContent = 'Objectifs';
+        tooltip.appendChild(_ttObjTitle);
+
+        task.objectives.forEach(obj => {
+            const item = document.createElement('div');
+            item.className = 'tt-obj-item';
+            const nameLine = document.createElement('div');
+            nameLine.className = 'tt-obj-name';
+            nameLine.textContent = obj.name || '(sans nom)';
+            item.appendChild(nameLine);
+            if (obj.start !== null && obj.start !== undefined && obj.target !== null && obj.target !== undefined) {
+                const vals = document.createElement('div');
+                vals.className = 'tt-obj-vals';
+                vals.innerHTML = `<span>${obj.start}</span><span class="tt-arrow">→</span><span class="tt-current">${obj.current ?? '—'}</span><span class="tt-arrow">→</span><span>${obj.target}</span>`;
+                item.appendChild(vals);
+                if (obj.current !== null && obj.current !== undefined) {
+                    const range = obj.target - obj.start;
+                    const pct = range !== 0 ? Math.max(0, Math.min(100, ((obj.current - obj.start) / range) * 100)) : 0;
+                    const barEl = document.createElement('div'); barEl.className = 'tt-bar';
+                    const fillEl = document.createElement('div'); fillEl.className = 'tt-fill'; fillEl.style.width = pct + '%';
+                    barEl.appendChild(fillEl);
+                    item.appendChild(barEl);
+                }
+            }
+            tooltip.appendChild(item);
+        });
+
+        const histBtn = document.createElement('button');
+        histBtn.style.cssText = 'margin-top:8px;background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:#6366f1;padding:4px 10px;border-radius:4px;cursor:pointer;font-size:11px;font-family:Geist,system-ui,sans-serif;width:100%;pointer-events:auto;';
+        histBtn.textContent = '📋 Voir l\'historique';
+        histBtn.addEventListener('click', e => { e.stopPropagation(); openHistPanel(task); });
+        tooltip.appendChild(histBtn);
+    }
+
+    // Notes
+    if (task.notes) {
+        const _ttNotes = document.createElement('div');
+        _ttNotes.className = 'tt-notes-block';
+        _ttNotes.textContent = '📝 ' + (task.notes.length > 90 ? task.notes.slice(0, 90) + '…' : task.notes);
+        tooltip.appendChild(_ttNotes);
+    }
+
+    bar.appendChild(tooltip);
+    bar.addEventListener('mouseenter', () => { if (!dragMoved) tooltip.classList.add('visible'); });
+    bar.addEventListener('mouseleave', () => { setTimeout(() => tooltip.classList.remove('visible'), 100); });
+
+    bar.append(resL, lbl, doneBtn, del, resR);
+
+    // ── Badge Métier sur la barre ──
+    if (task.metier) {
+        const mCol = metierColor(task.metier);
+        const mBadgeBar = document.createElement('span');
+        mBadgeBar.className = 'task-bar-metier';
+        mBadgeBar.textContent = task.metier;
+        if (mCol) {
+            mBadgeBar.style.background = mCol.bg;
+            mBadgeBar.style.color = mCol.fg;
+        } else {
+            mBadgeBar.style.background = 'rgba(0,0,0,0.25)';
+            mBadgeBar.style.color = 'rgba(255,255,255,0.75)';
+        }
+        // Insert before doneBtn so it stays visible
+        bar.insertBefore(mBadgeBar, doneBtn);
+    }
+
+    // ── Badge Bâtiment sur la barre ──
+    const _batsBar = Array.isArray(task.batiments) ? task.batiments.filter(Boolean) : [];
+    if (_batsBar.length > 0) {
+        const batBadge = document.createElement('span');
+        batBadge.className = 'task-bar-bat';
+        batBadge.textContent = _batsBar.length === 1 ? '🏢 ' + _batsBar[0] : '🏢 ' + _batsBar.length;
+        bar.insertBefore(batBadge, doneBtn);
+    }
+
+    // ── Creator dot (small colored circle at bottom-left) ──
+    if (task.createdBy) {
+        const cDot = document.createElement('div');
+        cDot.className = 'creator-dot';
+        const knownUser = _usersOnlineMap[task.createdBy];
+        cDot.style.background = knownUser?.color || userColorFromId(task.createdBy);
+        const cName = knownUser?.name || userNameFromId(task.createdBy);
+        const isSelf = task.createdBy === _cachedClientId;
+        cDot.title = 'Créé par : ' + cName + (isSelf ? ' (vous)' : '');
+        bar.appendChild(cDot);
+    }
+
+    // ── Note indicator dot ──
+    if (task.notes) {
+        const noteDot = document.createElement('div');
+        noteDot.className = 'task-bar-note-dot';
+        noteDot.title = task.notes.length > 60 ? task.notes.slice(0, 60) + '…' : task.notes;
+        bar.appendChild(noteDot);
+    }
+
+    // ── Status icon (shown beside label) ──
+    if (statusDef) {
+        const sIcon = document.createElement('span');
+        sIcon.className = 'task-status-icon';
+        sIcon.textContent = statusDef.icon;
+        sIcon.style.color = statusDef.color;
+        sIcon.title = statusDef.label;
+        bar.insertBefore(sIcon, doneBtn);
+    }
+
+    // ── Progress bar (thin strip at bottom of bar) ──
     const pTrack = document.createElement('div');
     pTrack.className = 'task-bar-progress-track';
     const pFill = document.createElement('div');
@@ -3708,14 +3963,11 @@ function createTaskBar(task, row) {
     bar.appendChild(pTrack);
     bar.appendChild(pFill);
 
-    // Badge % visible au survol
-    const pBadge = document.createElement('div');
-    pBadge.className = 'task-bar-progress-badge';
-    // Include status label in the hover badge
-    const statusLabel = statusDef ? ` · ${statusDef.icon} ${statusDef.label}` : '';
-    const notesSnippet = task.notes ? ` · 📝 ${task.notes.length > 40 ? task.notes.slice(0,40)+'…' : task.notes}` : '';
-    pBadge.textContent = Math.round(progressPct) + '%' + (progressIsManual ? '' : ' (auto)') + statusLabel + notesSnippet;
-    bar.appendChild(pBadge);
+    // ── % pill — always visible on bar ──
+    const pctPill = document.createElement('div');
+    pctPill.className = 'task-bar-pct-pill' + (progressPct <= 0 ? ' zero' : '');
+    pctPill.textContent = Math.round(progressPct) + '%';
+    bar.appendChild(pctPill);
 
     // Resize
     bar.addEventListener('mousedown', e => {
@@ -3981,6 +4233,111 @@ document.getElementById('btnToday').addEventListener('click', () => {
     render();
 });
 
+// ─── MINI-CALENDRIER ─────────────────────────────────────────────────────────
+(function() {
+    let miniCalYear = today.getFullYear();
+    let miniCalEl = null;
+
+    const MONTHS_MINI = ['Jan','Fév','Mar','Avr','Mai','Jun','Jul','Aoû','Sep','Oct','Nov','Déc'];
+
+    function openMiniCal() {
+        if (miniCalEl) { closeMiniCal(); return; }
+        miniCalYear = viewStart.getFullYear();
+        miniCalEl = document.createElement('div');
+        miniCalEl.className = 'mini-cal-popup';
+        renderMiniCal();
+
+        // Position below periodDisplay
+        const anchor = document.getElementById('periodDisplay');
+        const rect = anchor.getBoundingClientRect();
+        miniCalEl.style.top  = (rect.bottom + 6) + 'px';
+        miniCalEl.style.left = Math.max(8, rect.left - 10) + 'px';
+        document.body.appendChild(miniCalEl);
+
+        // Close on outside click
+        setTimeout(() => {
+            document.addEventListener('click', outsideClick);
+        }, 0);
+    }
+
+    function outsideClick(e) {
+        if (miniCalEl && !miniCalEl.contains(e.target) && e.target !== document.getElementById('periodDisplay')) {
+            closeMiniCal();
+        }
+    }
+
+    function closeMiniCal() {
+        miniCalEl?.remove();
+        miniCalEl = null;
+        document.removeEventListener('click', outsideClick);
+    }
+
+    function renderMiniCal() {
+        if (!miniCalEl) return;
+        miniCalEl.innerHTML = '';
+
+        // Header: ◀ ANNÉE ▶
+        const header = document.createElement('div');
+        header.className = 'mini-cal-header';
+
+        const btnPrev = document.createElement('button');
+        btnPrev.className = 'mini-cal-nav';
+        btnPrev.textContent = '◀';
+        btnPrev.addEventListener('click', e => { e.stopPropagation(); miniCalYear--; renderMiniCal(); });
+
+        const yearEl = document.createElement('div');
+        yearEl.className = 'mini-cal-year';
+        yearEl.textContent = miniCalYear;
+
+        const btnNext = document.createElement('button');
+        btnNext.className = 'mini-cal-nav';
+        btnNext.textContent = '▶';
+        btnNext.addEventListener('click', e => { e.stopPropagation(); miniCalYear++; renderMiniCal(); });
+
+        header.append(btnPrev, yearEl, btnNext);
+        miniCalEl.appendChild(header);
+
+        // Grid: 12 months
+        const grid = document.createElement('div');
+        grid.className = 'mini-cal-grid';
+
+        const curViewMonth = viewStart.getMonth();
+        const curViewYear  = viewStart.getFullYear();
+        const todayMonth   = today.getMonth();
+        const todayYear    = today.getFullYear();
+
+        MONTHS_MINI.forEach((name, idx) => {
+            const btn = document.createElement('button');
+            btn.className = 'mini-cal-month';
+            btn.textContent = name;
+            if (miniCalYear === curViewYear && idx === curViewMonth) btn.classList.add('mcal-current');
+            if (miniCalYear === todayYear   && idx === todayMonth)   btn.classList.add('mcal-today');
+            btn.addEventListener('click', e => {
+                e.stopPropagation();
+                viewStart = new Date(miniCalYear, idx, 1);
+                // Switch to month zoom if not already in a month-compatible zoom
+                if (zoom === 'currentweek' || zoom === 'week') {
+                    zoom = 'month';
+                    document.querySelectorAll('.zoom-btn').forEach(b => b.classList.toggle('active', b.dataset.zoom === 'month'));
+                }
+                render();
+                closeMiniCal();
+            });
+            grid.appendChild(btn);
+        });
+
+        miniCalEl.appendChild(grid);
+    }
+
+    document.getElementById('periodDisplay').addEventListener('click', e => {
+        e.stopPropagation();
+        openMiniCal();
+    });
+    // Indicate it's clickable
+    document.getElementById('periodDisplay').style.cursor = 'pointer';
+    document.getElementById('periodDisplay').title = 'Cliquer pour naviguer rapidement';
+})();
+
 document.querySelectorAll('.zoom-btn').forEach(btn => {
     btn.addEventListener('click', () => {
         document.querySelectorAll('.zoom-btn').forEach(b => b.classList.remove('active'));
@@ -4019,18 +4376,6 @@ document.getElementById('btnAddRow').addEventListener('click', () => {
         const inputs = document.querySelectorAll('.gantt-row:not([data-group-id]) .row-label input');
         if (inputs.length) inputs[inputs.length-1].focus();
     }, 50);
-});
-
-document.getElementById('btnGroupMetier').addEventListener('click', () => {
-    const metiers = allMetiers();
-    if (metiers.length === 0) {
-        showToast('⚠ Aucun métier renseigné sur les lignes');
-        return;
-    }
-    groupByMetier = !groupByMetier;
-    document.getElementById('btnGroupMetier').classList.toggle('active', groupByMetier);
-    renderBody();
-    showToast(groupByMetier ? '⊞ Vue par métier activée' : '⊟ Vue par métier désactivée');
 });
 
 document.getElementById('btnAddGroup').addEventListener('click', () => {
@@ -4297,6 +4642,107 @@ function openModal(rowId, sd, ed, taskId = null) {
     buildColorPicker();
     buildStatusSelector(task?.status || null);
     document.getElementById('mNotes').value = task?.notes || '';
+    // Champ Métier
+    const mMetierInp = document.getElementById('mMetier');
+    mMetierInp.value = task?.metier || '';
+    // Autocomplete métier dans le modal
+    const mMetierSuggest = document.getElementById('mMetierSuggest');
+    function showMetierSuggest() {
+        const typed = mMetierInp.value.toLowerCase();
+        const opts = allMetiers().filter(m => m.toLowerCase().includes(typed) && m !== mMetierInp.value);
+        if (opts.length === 0) { mMetierSuggest.style.display = 'none'; return; }
+        mMetierSuggest.innerHTML = '';
+        opts.forEach(s => {
+            const col = metierColor(s);
+            const item = document.createElement('div');
+            item.style.cssText = 'padding:6px 11px;font-size:11px;cursor:pointer;color:var(--text-soft);display:flex;align-items:center;gap:7px;';
+            const dot = document.createElement('span');
+            dot.style.cssText = `width:7px;height:7px;border-radius:50%;flex-shrink:0;background:${col ? col.fg : 'var(--text-muted)'};`;
+            const lbl = document.createElement('span');
+            lbl.textContent = s;
+            item.append(dot, lbl);
+            item.addEventListener('mouseenter', () => item.style.background = 'var(--surface3)');
+            item.addEventListener('mouseleave', () => item.style.background = '');
+            item.addEventListener('pointerdown', e => { e.preventDefault(); mMetierInp.value = s; mMetierSuggest.style.display = 'none'; });
+            mMetierSuggest.appendChild(item);
+        });
+        mMetierSuggest.style.display = 'block';
+    }
+    mMetierInp.oninput = showMetierSuggest;
+    mMetierInp.onfocus = showMetierSuggest;
+    mMetierInp.onblur = () => setTimeout(() => { mMetierSuggest.style.display = 'none'; }, 150);
+
+    // ── Champ Bâtiments (tags multi-valeurs) ──
+    const _initBats = Array.isArray(task?.batiments) ? [...task.batiments] : [];
+    const _modalBats = [..._initBats]; // tableau de travail pour le modal courant
+    const _batWrap = document.getElementById('mBatimentsWrap');
+    const _batInput = document.getElementById('mBatimentInput');
+    const _batSuggest = document.getElementById('mBatimentSuggest');
+
+    function _renderBatTags() {
+        // Remove existing tags (keep the input)
+        _batWrap.querySelectorAll('.batiment-tag').forEach(t => t.remove());
+        _modalBats.forEach((b, i) => {
+            const tag = document.createElement('span');
+            tag.className = 'batiment-tag';
+            tag.textContent = b;
+            const del = document.createElement('button');
+            del.className = 'batiment-tag-del';
+            del.type = 'button';
+            del.textContent = '×';
+            del.addEventListener('click', () => { _modalBats.splice(i, 1); _renderBatTags(); });
+            tag.appendChild(del);
+            _batWrap.insertBefore(tag, _batInput);
+        });
+    }
+
+    function _addBat(val) {
+        const v = val.trim();
+        if (!v || _modalBats.includes(v)) { _batInput.value = ''; return; }
+        _modalBats.push(v);
+        _batInput.value = '';
+        _batSuggest.style.display = 'none';
+        _renderBatTags();
+    }
+
+    function _showBatSuggest() {
+        const typed = _batInput.value.toLowerCase();
+        const opts = allBatiments().filter(b => b.toLowerCase().includes(typed) && !_modalBats.includes(b));
+        if (opts.length === 0) { _batSuggest.style.display = 'none'; return; }
+        _batSuggest.innerHTML = '';
+        opts.forEach(s => {
+            const col = batimentColor(s);
+            const item = document.createElement('div');
+            item.style.cssText = 'padding:6px 11px;font-size:11px;cursor:pointer;color:var(--text-soft);display:flex;align-items:center;gap:7px;';
+            const dot = document.createElement('span');
+            dot.style.cssText = `width:7px;height:7px;border-radius:50%;flex-shrink:0;background:${col.fg};`;
+            const lbl = document.createElement('span');
+            lbl.textContent = s;
+            item.append(dot, lbl);
+            item.addEventListener('mouseenter', () => item.style.background = 'var(--surface3)');
+            item.addEventListener('mouseleave', () => item.style.background = '');
+            item.addEventListener('pointerdown', e => { e.preventDefault(); _addBat(s); });
+            _batSuggest.appendChild(item);
+        });
+        _batSuggest.style.display = 'block';
+    }
+
+    _batInput.oninput = _showBatSuggest;
+    _batInput.onfocus = _showBatSuggest;
+    _batInput.onblur = () => setTimeout(() => { _batSuggest.style.display = 'none'; }, 150);
+    _batInput.onkeydown = e => {
+        if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); _addBat(_batInput.value); }
+        if (e.key === 'Backspace' && !_batInput.value && _modalBats.length) {
+            _modalBats.pop(); _renderBatTags();
+        }
+    };
+    _batWrap.addEventListener('click', () => _batInput.focus());
+
+    // Expose _modalBats to save handler via a closure-safe reference on the input element
+    _batInput.dataset.modalBatsRef = ''; // sentinel
+    _batInput._modalBats = _modalBats;   // live reference
+
+    _renderBatTags();
 
     // Show creator info when editing an existing task that has createdBy
     const creatorRow = document.getElementById('mCreatorRow');
@@ -4380,6 +4826,8 @@ document.getElementById('mCreate').addEventListener('click', () => {
             task.progress = parseInt(document.getElementById('mProgress').value) || 0;
             task.status = selectedStatus || null;
             task.notes = document.getElementById('mNotes').value.trim() || null;
+            task.metier = document.getElementById('mMetier').value.trim() || null;
+            task.batiments = [...(document.getElementById('mBatimentInput')._modalBats || [])];
             task.objectives = mergedObjectives;
         }
     } else {
@@ -4392,7 +4840,9 @@ document.getElementById('mCreate').addEventListener('click', () => {
         const etp = parseFloat(document.getElementById('mEtp').value) || 0;
         const progress = parseInt(document.getElementById('mProgress').value) || 0;
         const notes = document.getElementById('mNotes').value.trim() || null;
-        row.tasks.push({ id: taskIdCounter++, name, start, end, color: selectedColor, tjm, etp, progress, status: selectedStatus || null, notes, objectives: mergedObjectives, createdBy: _cachedClientId || null });
+        const metier = document.getElementById('mMetier').value.trim() || null;
+        const batiments = [...(document.getElementById('mBatimentInput')._modalBats || [])];
+        row.tasks.push({ id: taskIdCounter++, name, start, end, color: selectedColor, tjm, etp, progress, status: selectedStatus || null, notes, metier, batiments, objectives: mergedObjectives, createdBy: _cachedClientId || null });
     }
 
     document.getElementById('mStartDate').style.borderColor = '';
@@ -4880,19 +5330,13 @@ function renderDashboard() {
             const { totalCost, avgEtp } = rowTotals(row);
             const pct = totalCostAll > 0 ? (totalCost / totalCostAll) * 100 : 0;
             const nTasks = row.tasks.length;
-            // Metier badge
-            const mName = row.metier || '';
-            const col = metierColor(mName);
-            const metierBadge = mName && col
-                ? `<span style="font-size:10px;padding:1px 7px;border-radius:10px;background:${col.bg};color:${col.fg};border:1px solid ${col.fg}44;font-weight:600;margin-left:4px">${mName}</span>`
-                : '';
 
             const item = document.createElement('div');
             item.className = 'db-row-item';
             item.innerHTML = `
                 <div class="db-row-name">
                     <div class="db-row-dot" style="background:${row.color || TASK_COLORS[0]}"></div>
-                    <div class="db-row-label">${row.name || '(sans nom)'}${metierBadge}</div>
+                    <div class="db-row-label">${row.name || '(sans nom)'}</div>
                     <div class="db-row-cost">${fmtCost(totalCost)}</div>
                 </div>
                 <div class="db-row-bar-wrap">
@@ -4909,15 +5353,15 @@ function renderDashboard() {
         body.appendChild(rowSection);
     }
 
-    // ── Par métier ──
+    // ── Par métier (agrégation depuis les tâches) ──
     const metierGroups = {};
     rows.forEach(row => {
-        const mName = (row.metier || '').trim();
-        if (!mName) return;
-        if (!metierGroups[mName]) metierGroups[mName] = { name: mName, cost: 0, etpDays: 0, days: 0, rowCount: 0 };
-        metierGroups[mName].rowCount++;
         row.tasks.forEach(t => {
+            const mName = (t.metier || '').trim();
+            if (!mName) return;
+            if (!metierGroups[mName]) metierGroups[mName] = { name: mName, cost: 0, etpDays: 0, days: 0, taskCount: 0 };
             const { days, cost, etp } = taskCost(t);
+            metierGroups[mName].taskCount++;
             metierGroups[mName].cost += cost;
             metierGroups[mName].etpDays += days * etp;
             metierGroups[mName].days += days;
@@ -4940,7 +5384,7 @@ function renderDashboard() {
             card.innerHTML = `
                 <div style="font-size:11px;font-weight:600;color:${col.fg};margin-bottom:8px;text-transform:uppercase;letter-spacing:0.06em">${m.name}</div>
                 <div style="font-family:'Geist Mono',monospace;font-size:20px;font-weight:400;color:${col.fg}">${fmtCost(m.cost)}</div>
-                <div style="font-size:10px;color:${col.fg}99;margin-top:4px">${m.rowCount} ligne${m.rowCount > 1 ? 's' : ''} · ${fmtEtp(avgEtp)} · ${pct.toFixed(1)}% du total</div>
+                <div style="font-size:10px;color:${col.fg}99;margin-top:4px">${m.taskCount} tâche${m.taskCount > 1 ? 's' : ''} · ${fmtEtp(avgEtp)} · ${pct.toFixed(1)}% du total</div>
                 <div style="height:2px;background:${col.fg}18;border-radius:2px;margin-top:10px;overflow:hidden">
                     <div style="height:100%;width:${pct}%;background:${col.fg};border-radius:2px;transition:width 0.4s"></div>
                 </div>`;
@@ -4948,6 +5392,59 @@ function renderDashboard() {
         });
         metierSection.appendChild(metierGrid);
         body.appendChild(metierSection);
+    }
+
+    // ── Par bâtiment (agrégation depuis les tâches) ──
+    const batimentGroups = {};
+    rows.forEach(row => {
+        row.tasks.forEach(t => {
+            const bats = Array.isArray(t.batiments) ? t.batiments.filter(Boolean) : [];
+            bats.forEach(bName => {
+                if (!batimentGroups[bName]) batimentGroups[bName] = { name: bName, cost: 0, etpDays: 0, days: 0, taskCount: 0 };
+                const { days, cost, etp } = taskCost(t);
+                // Une tâche affectée à N bâtiments contribue intégralement à chacun
+                batimentGroups[bName].taskCount++;
+                batimentGroups[bName].cost += cost;
+                batimentGroups[bName].etpDays += days * etp;
+                batimentGroups[bName].days += days;
+            });
+        });
+    });
+
+    const batimentEntries = Object.values(batimentGroups);
+    if (batimentEntries.length > 0) {
+        const batSection = document.createElement('div');
+        batSection.innerHTML = `<div class="db-section-title">🏢 Par bâtiment</div>`;
+        const batGrid = document.createElement('div');
+        batGrid.style.cssText = 'display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:10px;';
+
+        batimentEntries.sort((a, b) => b.cost - a.cost).forEach(b => {
+            const avgEtp = b.days > 0 ? b.etpDays / b.days : 0;
+            const pct = totalCostAll > 0 ? (b.cost / totalCostAll) * 100 : 0;
+            const col = batimentColor(b.name);
+            const card = document.createElement('div');
+            card.style.cssText = `background:${col.bg};border:1px solid ${col.fg}22;border-radius:8px;padding:14px 16px;cursor:pointer;transition:border-color 0.12s;`;
+            card.innerHTML = `
+                <div style="font-size:11px;font-weight:600;color:${col.fg};margin-bottom:8px;letter-spacing:0.04em">🏢 ${b.name}</div>
+                <div style="font-family:'Geist Mono',monospace;font-size:20px;font-weight:400;color:${col.fg}">${fmtCost(b.cost)}</div>
+                <div style="font-size:10px;color:${col.fg}99;margin-top:4px">${b.taskCount} tâche${b.taskCount > 1 ? 's' : ''} · ${fmtEtp(avgEtp)} · ${pct.toFixed(1)}% du total</div>
+                <div style="height:2px;background:${col.fg}18;border-radius:2px;margin-top:10px;overflow:hidden">
+                    <div style="height:100%;width:${pct}%;background:${col.fg};border-radius:2px;transition:width 0.4s"></div>
+                </div>`;
+            // Clic → ouvre le Gantt filtré sur ce bâtiment
+            card.addEventListener('click', () => {
+                switchTab('gantt');
+                setTimeout(() => {
+                    if (!filterVisible) document.getElementById('btnToggleFilter').click();
+                    filterState.batiment = b.name;
+                    renderBatimentChips();
+                    applyFilters();
+                }, 50);
+            });
+            batGrid.appendChild(card);
+        });
+        batSection.appendChild(batGrid);
+        body.appendChild(batSection);
     }
 
     // ── Répartition par statut ──
@@ -5280,7 +5777,9 @@ function renderDashboard() {
     document.getElementById('dbImportBtn').addEventListener('click', () => document.getElementById('btnImport').click());
     document.getElementById('dbClearBtn').addEventListener('click', () => {
         if (!confirm('Effacer tout le planning ? Cette action est irréversible.')) return;
-        rows = []; groups = [];
+        pushUndo();
+        rows = []; groups = []; milestones = [];
+        saveToStorage();
         render();
         switchTab('gantt');
         showToast('🗑 Planning effacé');
@@ -5450,11 +5949,26 @@ document.addEventListener('mousemove', e => {
 document.addEventListener('mouseup', () => { if (msMoveState) { msMoveState = null; } });
 
 // ─── DATA NORMALIZATION ──────────────────────────────────
+const _VALID_STATUSES = new Set(['todo', 'in_progress', 'done']);
+const _STATUS_MIGRATION = { review: 'in_progress', blocked: 'in_progress' };
+
 function normalizeRows(rows) {
     if (!Array.isArray(rows)) return [];
     return rows.map(row => ({
         ...row,
-        tasks: Array.isArray(row.tasks) ? row.tasks : []
+        tasks: Array.isArray(row.tasks) ? row.tasks.map(task => ({
+            ...task,
+            // Migrer les statuts supprimés vers in_progress
+            status: task.status
+                ? (_STATUS_MIGRATION[task.status] || (_VALID_STATUSES.has(task.status) ? task.status : null))
+                : null,
+            // Assurer que metier est une string ou null
+            metier: task.metier ? String(task.metier).trim() || null : null,
+            // Assurer que batiments est toujours un tableau de strings non vides
+            batiments: Array.isArray(task.batiments)
+                ? task.batiments.map(b => String(b).trim()).filter(Boolean)
+                : [],
+        })) : []
     }));
 }
 
@@ -5515,6 +6029,10 @@ function wrapMutating(fn) {
 //
 // IMPORTANT: La configuration Firebase doit être complète pour que l'application fonctionne.
 // Toutes les données (planning, préférences utilisateur) sont stockées dans Firebase uniquement.
+
+// Passer à true pour activer les logs détaillés (utile en dev/debug, à garder false en prod)
+const DEBUG = false;
+const dbg = (...args) => { if (DEBUG) console.log(...args); };
 const FIREBASE_CONFIG = {
     apiKey:            "AIzaSyAT4342sQSS5Vv_oM9Xce2jXMkh2ZkotbM",   // ex: "AIzaSy..."
     authDomain:        "hdev-c3842.firebaseapp.com",   // ex: "mon-projet.firebaseapp.com"
@@ -5566,12 +6084,12 @@ async function getClientId() {
 
         if (snapshot.exists()) {
             _cachedClientId = snapshot.val();
-            console.log('🔵 [Firebase] Client ID récupéré depuis Firebase:', _cachedClientId);
+            dbg('🔵 [Firebase] Client ID récupéré depuis Firebase:', _cachedClientId);
         } else {
             // Créer un nouvel ID unique
             _cachedClientId = 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 6);
             await firebaseDB.ref(`${DB_USER_SETTINGS_PATH}/${fingerprintId}/clientId`).set(_cachedClientId);
-            console.log('🔵 [Firebase] Nouveau client ID généré et sauvegardé:', _cachedClientId);
+            dbg('🔵 [Firebase] Nouveau client ID généré et sauvegardé:', _cachedClientId);
         }
 
         return _cachedClientId;
@@ -5597,8 +6115,8 @@ function updateSyncStatus(status) {
     el.title = `Synchronisation Firebase — état : ${c.label}`;
 }
 
-function applyRemoteData(data) {
-    console.log('🔵 [Firebase] Application des données distantes...');
+function applyRemoteData(data, isInitialLoad = false) {
+    dbg('🔵 [Firebase] Application des données distantes...');
 
     if (!data || !Array.isArray(data.rows)) {
         console.warn('⚠️ [Firebase] Données invalides reçues:', {
@@ -5635,7 +6153,7 @@ function applyRemoteData(data) {
         hideDragLabel();
     }
 
-    console.log('🔵 [Firebase] Données distantes valides:', {
+    dbg('🔵 [Firebase] Données distantes valides:', {
         rowsCount: data.rows.length,
         groupsCount: data.groups ? data.groups.length : 0,
         milestonesCount: data.milestones ? data.milestones.length : 0,
@@ -5645,30 +6163,30 @@ function applyRemoteData(data) {
     });
 
     // Apply remote state to local variables
-    console.log('🔵 [Firebase] Mise à jour des variables locales...');
+    dbg('🔵 [Firebase] Mise à jour des variables locales...');
     rows            = normalizeRows(data.rows);
     groups          = data.groups          || [];
     milestones      = data.milestones      || [];
     taskIdCounter   = Math.max(taskIdCounter,   data.taskIdCounter   || 0);
     groupIdCounter  = Math.max(groupIdCounter,  data.groupIdCounter  || 3);
     msIdCounter     = Math.max(msIdCounter,     data.msIdCounter     || 0);
-    if (data.zoom)      { zoom = data.zoom; document.querySelectorAll('.zoom-btn').forEach(b => b.classList.toggle('active', b.dataset.zoom === zoom)); }
-    if (data.viewStart) { viewStart = new Date(data.viewStart); }
+    // zoom et viewStart ne sont pas appliqués depuis les données distantes :
+    // chaque utilisateur conserve sa propre vue
 
-    console.log('✅ [Firebase] Variables locales mises à jour');
+    dbg('✅ [Firebase] Variables locales mises à jour');
 
-    console.log('🔵 [Firebase] Rendu de l\'interface...');
+    dbg('🔵 [Firebase] Rendu de l\'interface...');
     _applyingRemote = true;
     render();
     _applyingRemote = false;
     updateSyncStatus('synced');
-    showToast('🔄 Planning mis à jour (autre utilisateur)');
-    console.log('✅ [Firebase] Application des données distantes terminée');
+    if (!isInitialLoad) showToast('🔄 Planning mis à jour (autre utilisateur)');
+    dbg('✅ [Firebase] Application des données distantes terminée');
 }
 
 function initFirebaseSync() {
-    console.log('🔵 [Firebase] Initialisation de Firebase...');
-    console.log('🔵 [Firebase] Configuration:', {
+    dbg('🔵 [Firebase] Initialisation de Firebase...');
+    dbg('🔵 [Firebase] Configuration:', {
         projectId: FIREBASE_CONFIG.projectId,
         authDomain: FIREBASE_CONFIG.authDomain,
         hasDatabaseURL: !!FIREBASE_CONFIG.databaseURL
@@ -5680,25 +6198,25 @@ function initFirebaseSync() {
     }
 
     try {
-        console.log('🔵 [Firebase] Appel de firebase.initializeApp()...');
+        dbg('🔵 [Firebase] Appel de firebase.initializeApp()...');
         firebase.initializeApp(FIREBASE_CONFIG);
-        console.log('✅ [Firebase] firebase.initializeApp() réussi');
+        dbg('✅ [Firebase] firebase.initializeApp() réussi');
 
-        console.log('🔵 [Firebase] Création de la référence à la base de données...');
+        dbg('🔵 [Firebase] Création de la référence à la base de données...');
         firebaseDB = firebase.database();
-        console.log('✅ [Firebase] Référence à la base de données créée:', firebaseDB ? 'OK' : 'ÉCHEC');
+        dbg('✅ [Firebase] Référence à la base de données créée:', firebaseDB ? 'OK' : 'ÉCHEC');
 
         updateSyncStatus('connecting');
-        console.log('🔵 [Firebase] Statut mis à jour: "connecting"');
+        dbg('🔵 [Firebase] Statut mis à jour: "connecting"');
 
         // Monitor connection state (single persistent listener, no cleanup needed for SPA)
-        console.log('🔵 [Firebase] Configuration du listener de connexion (.info/connected)...');
+        dbg('🔵 [Firebase] Configuration du listener de connexion (.info/connected)...');
         firebaseDB.ref('.info/connected').on('value', snap => {
             const isConnected = snap.val();
-            console.log(`🔔 [Firebase] État de connexion mis à jour: ${isConnected ? '✅ CONNECTÉ' : '❌ DÉCONNECTÉ'}`);
+            dbg(`🔔 [Firebase] État de connexion mis à jour: ${isConnected ? '✅ CONNECTÉ' : '❌ DÉCONNECTÉ'}`);
             updateSyncStatus(isConnected ? 'connected' : 'offline');
         });
-        console.log('✅ [Firebase] Listener de connexion activé');
+        dbg('✅ [Firebase] Listener de connexion activé');
 
     } catch (e) {
         console.error('❌ [Firebase] Erreur lors de l\'initialisation:', e);
@@ -5710,9 +6228,9 @@ function initFirebaseSync() {
 // Called after initial load to start listening for remote changes.
 // Uses _clientId to ignore our own writes — more reliable than a timing flag.
 async function startFirebaseListener() {
-    console.log('🔵 [Firebase] Démarrage du listener Firebase...');
-    console.log('🔵 [Firebase] État - firebaseDB:', firebaseDB ? 'disponible' : 'null');
-    console.log('🔵 [Firebase] État - firebaseListenerActive:', firebaseListenerActive);
+    dbg('🔵 [Firebase] Démarrage du listener Firebase...');
+    dbg('🔵 [Firebase] État - firebaseDB:', firebaseDB ? 'disponible' : 'null');
+    dbg('🔵 [Firebase] État - firebaseListenerActive:', firebaseListenerActive);
 
     if (!firebaseDB || firebaseListenerActive) {
         if (!firebaseDB) {
@@ -5723,15 +6241,15 @@ async function startFirebaseListener() {
         return;
     }
     firebaseListenerActive = true;
-    console.log('✅ [Firebase] firebaseListenerActive défini à true');
+    dbg('✅ [Firebase] firebaseListenerActive défini à true');
 
     try {
         const clientId = await getClientId();
-        console.log('🔵 [Firebase] ID du client:', clientId);
-        console.log('🔵 [Firebase] Écoute des changements sur le chemin:', DB_PLANNING_PATH);
+        dbg('🔵 [Firebase] ID du client:', clientId);
+        dbg('🔵 [Firebase] Écoute des changements sur le chemin:', DB_PLANNING_PATH);
 
         firebaseDB.ref(DB_PLANNING_PATH).on('value', snapshot => {
-            console.log('🔔 [Firebase] Événement reçu sur', DB_PLANNING_PATH);
+            dbg('🔔 [Firebase] Événement reçu sur', DB_PLANNING_PATH);
             const data = snapshot.val();
 
             if (!data) {
@@ -5739,7 +6257,7 @@ async function startFirebaseListener() {
                 return;
             }
 
-            console.log('🔵 [Firebase] Données reçues:', {
+            dbg('🔵 [Firebase] Données reçues:', {
                 hasRows: Array.isArray(data.rows),
                 rowsCount: data.rows ? data.rows.length : 0,
                 remoteClientId: data._clientId,
@@ -5748,15 +6266,15 @@ async function startFirebaseListener() {
             });
 
             if (data._clientId === clientId) {
-                console.log('⏭️ [Firebase] Ignorer les modifications de ce client (évite la boucle)');
+                dbg('⏭️ [Firebase] Ignorer les modifications de ce client (évite la boucle)');
                 return; // Skip our own writes
             }
 
-            console.log('✅ [Firebase] Application des données distantes...');
+            dbg('✅ [Firebase] Application des données distantes...');
             applyRemoteData(data);
         });
 
-        console.log('✅ [Firebase] Listener Firebase actif et prêt');
+        dbg('✅ [Firebase] Listener Firebase actif et prêt');
     } catch (error) {
         console.error('❌ [Firebase] Erreur lors du démarrage du listener:', error);
         firebaseListenerActive = false;
@@ -5768,7 +6286,7 @@ let saveInProgress = false;
 
 async function saveToStorage() {
     if (saveInProgress) {
-        console.log('⏭️ [Sauvegarde] Sauvegarde déjà en cours, ignoré');
+        dbg('⏭️ [Sauvegarde] Sauvegarde déjà en cours, ignoré');
         return;
     }
 
@@ -5779,7 +6297,7 @@ async function saveToStorage() {
     }
 
     saveInProgress = true;
-    console.log('🔵 [Sauvegarde] Début de la sauvegarde...');
+    dbg('🔵 [Sauvegarde] Début de la sauvegarde...');
 
     try {
         const data = {
@@ -5789,12 +6307,12 @@ async function saveToStorage() {
             milestones,
             taskIdCounter,
             groupIdCounter,
-            msIdCounter,
-            zoom,
-            viewStart: viewStart.toISOString()
+            msIdCounter
+            // zoom et viewStart sont intentionnellement exclus :
+            // chaque utilisateur garde sa propre vue (ne pas écraser la vue des autres)
         };
 
-        console.log('🔵 [Sauvegarde] Données à sauvegarder:', {
+        dbg('🔵 [Sauvegarde] Données à sauvegarder:', {
             version: data.version,
             rowsCount: rows.length,
             groupsCount: groups.length,
@@ -5803,9 +6321,9 @@ async function saveToStorage() {
         });
 
         const clientId = await getClientId();
-        console.log('🔵 [Firebase] Synchronisation avec Firebase...');
-        console.log('🔵 [Firebase] Client ID:', clientId);
-        console.log('🔵 [Firebase] Chemin:', DB_PLANNING_PATH);
+        dbg('🔵 [Firebase] Synchronisation avec Firebase...');
+        dbg('🔵 [Firebase] Client ID:', clientId);
+        dbg('🔵 [Firebase] Chemin:', DB_PLANNING_PATH);
 
         try {
             await firebaseDB.ref(DB_PLANNING_PATH).set({
@@ -5814,9 +6332,9 @@ async function saveToStorage() {
                 _savedAt:  Date.now()
             });
 
-            console.log('✅ [Firebase] Données synchronisées avec succès');
+            dbg('✅ [Firebase] Données synchronisées avec succès');
             updateSyncStatus('synced');
-            console.log('✅ [Sauvegarde] Planning sauvegardé avec succès');
+            dbg('✅ [Sauvegarde] Planning sauvegardé avec succès');
         } catch (firebaseError) {
             // Detect specific Firebase errors
             const errorCode = firebaseError.code;
@@ -5856,12 +6374,12 @@ async function saveToStorage() {
         if (firebaseDB) updateSyncStatus('error');
     } finally {
         saveInProgress = false;
-        console.log('🔵 [Sauvegarde] Sauvegarde terminée (saveInProgress = false)');
+        dbg('🔵 [Sauvegarde] Sauvegarde terminée (saveInProgress = false)');
     }
 }
 
 async function loadFromStorage() {
-    console.log('🔵 [Chargement] Début du chargement des données...');
+    dbg('🔵 [Chargement] Début du chargement des données...');
 
     if (!firebaseDB) {
         console.error('❌ [Chargement] Firebase non configuré - impossible de charger les données');
@@ -5869,17 +6387,17 @@ async function loadFromStorage() {
         return false;
     }
 
-    console.log('🔵 [Firebase] Firebase configuré, chargement depuis Firebase...');
-    console.log('🔵 [Firebase] Chemin:', DB_PLANNING_PATH);
+    dbg('🔵 [Firebase] Firebase configuré, chargement depuis Firebase...');
+    dbg('🔵 [Firebase] Chemin:', DB_PLANNING_PATH);
 
     try {
         const snapshot = await firebaseDB.ref(DB_PLANNING_PATH).get();
-        console.log('✅ [Firebase] Snapshot récupéré');
+        dbg('✅ [Firebase] Snapshot récupéré');
 
         const data = snapshot.val();
 
         if (data) {
-            console.log('🔵 [Firebase] Données trouvées:', {
+            dbg('🔵 [Firebase] Données trouvées:', {
                 hasRows: Array.isArray(data.rows),
                 rowsCount: data.rows ? data.rows.length : 0,
                 hasGroups: !!data.groups,
@@ -5889,9 +6407,9 @@ async function loadFromStorage() {
             });
 
             if (Array.isArray(data.rows)) {
-                console.log('✅ [Firebase] Données valides, application...');
-                applyRemoteData(data);
-                console.log('✅ [Chargement] Chargement depuis Firebase réussi');
+                dbg('✅ [Firebase] Données valides, application...');
+                applyRemoteData(data, true); // true = chargement initial, pas de toast
+                dbg('✅ [Chargement] Chargement depuis Firebase réussi');
                 return true;
             } else {
                 console.warn('⚠️ [Firebase] Les données ne contiennent pas de tableau rows valide');
@@ -5922,7 +6440,7 @@ async function saveUserSetting(key, value) {
         const clientId = await getClientId();
         const path = `${DB_USER_SETTINGS_PATH}/${clientId}/${key}`;
         await firebaseDB.ref(path).set(value);
-        console.log('✅ [Paramètres] Paramètre sauvegardé:', key, '=', value);
+        dbg('✅ [Paramètres] Paramètre sauvegardé:', key, '=', value);
     } catch (error) {
         console.error('❌ [Paramètres] Erreur lors de la sauvegarde du paramètre:', key, error);
     }
@@ -5941,7 +6459,7 @@ async function loadUserSetting(key, defaultValue = null) {
 
         if (snapshot.exists()) {
             const value = snapshot.val();
-            console.log('✅ [Paramètres] Paramètre chargé:', key, '=', value);
+            dbg('✅ [Paramètres] Paramètre chargé:', key, '=', value);
             return value;
         } else {
             console.log('⚠️ [Paramètres] Paramètre non trouvé, utilisation de la valeur par défaut:', key);
@@ -6000,7 +6518,7 @@ async function startPresence() {
 
         // Write current presence
         await presenceRef.set({ name, color, clientId, lastSeen: Date.now() });
-        console.log('✅ [Présence] Présence enregistrée:', name, '(', clientId, ')');
+        dbg('✅ [Présence] Présence enregistrée:', name, '(', clientId, ')');
 
         // Refresh lastSeen every 30 s so stale entries can be detected
         _presenceIntervalId = setInterval(() => { if (firebaseDB) presenceRef.update({ lastSeen: Date.now() }); }, 30000);
@@ -6019,7 +6537,12 @@ function renderOnlineUsers() {
     const container = document.getElementById('onlineUsers');
     if (!container) return;
     container.innerHTML = '';
-    const users = Object.values(_usersOnlineMap);
+    const now = Date.now();
+    const STALE_MS = 90_000; // 90 secondes
+    const users = Object.values(_usersOnlineMap).filter(u =>
+        // Toujours afficher soi-même, filtrer les entrées fantômes
+        u.clientId === _cachedClientId || !u.lastSeen || (now - u.lastSeen) < STALE_MS
+    );
     // Self first, then alphabetical
     users.sort((a, b) => {
         if (a.clientId === _cachedClientId) return -1;
@@ -6033,7 +6556,8 @@ function renderOnlineUsers() {
         avatar.style.background = user.color || userColorFromId(user.clientId || '');
         const initials = (user.name || '?').split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase();
         avatar.textContent = initials;
-        avatar.title = (user.name || user.clientId || 'Utilisateur') + (isSelf ? ' (vous)' : '');
+        const lastSeenStr = user.lastSeen ? new Date(user.lastSeen).toLocaleTimeString('fr-FR') : '—';
+        avatar.title = (user.name || user.clientId || 'Utilisateur') + (isSelf ? ' (vous)' : ` · vu à ${lastSeenStr}`);
         container.appendChild(avatar);
     });
 }
@@ -6325,15 +6849,38 @@ function renderHistogram() {
 }
 
 // ─── FILTRE / RECHERCHE ──────────────────────────────────
-let filterState = { text: '', status: null, userStatus: null }; // status: null|'active'|'upcoming'|'done'
+let filterState = { text: '', status: null, userStatus: null, batiment: null };
 let filterVisible = false;
+
+function renderBatimentChips() {
+    const container = document.getElementById('filterBatChips');
+    if (!container) return;
+    container.innerHTML = '';
+    allBatiments().forEach(b => {
+        const chip = document.createElement('button');
+        chip.className = 'filter-chip' + (filterState.batiment === b ? ' active' : '');
+        chip.textContent = b;
+        chip.dataset.bat = b;
+        chip.addEventListener('click', function() {
+            filterState.batiment = filterState.batiment === b ? null : b;
+            renderBatimentChips();
+            applyFilters();
+        });
+        container.appendChild(chip);
+    });
+}
 
 document.getElementById('btnToggleFilter').addEventListener('click', () => {
     filterVisible = !filterVisible;
     document.getElementById('filterBar').classList.toggle('hidden', !filterVisible);
     document.getElementById('btnToggleFilter').classList.toggle('active', filterVisible);
-    if (filterVisible) document.getElementById('filterSearch').focus();
-    else { filterState = { text: '', status: null, userStatus: null }; applyFilters(); }
+    if (filterVisible) {
+        renderBatimentChips();
+        document.getElementById('filterSearch').focus();
+    } else {
+        filterState = { text: '', status: null, userStatus: null, batiment: null };
+        applyFilters();
+    }
 });
 
 document.getElementById('filterSearch').addEventListener('input', e => {
@@ -6363,9 +6910,10 @@ document.querySelectorAll('.filter-chip[data-us]').forEach(btn => {
 });
 
 document.getElementById('filterClear').addEventListener('click', () => {
-    filterState = { text: '', status: null, userStatus: null };
+    filterState = { text: '', status: null, userStatus: null, batiment: null };
     document.getElementById('filterSearch').value = '';
     document.querySelectorAll('.filter-chip').forEach(c => c.classList.remove('active'));
+    renderBatimentChips();
     applyFilters();
 });
 
@@ -6383,9 +6931,10 @@ function applyFilters() {
     const txt = filterState.text;
     const status = filterState.status;
     const userStatus = filterState.userStatus;
+    const batiment = filterState.batiment;
     // Map filter chip id to actual task.status value ('done_status' → 'done')
     const resolvedUserStatus = userStatus === 'done_status' ? 'done' : userStatus;
-    const noFilter = !txt && !status && !userStatus;
+    const noFilter = !txt && !status && !userStatus && !batiment;
 
     let visibleRows = 0, totalRows = 0;
 
@@ -6402,7 +6951,8 @@ function applyFilters() {
             const nameOk = !txt || t.name.toLowerCase().includes(txt);
             const statusOk = !status || taskMatchesStatus(t, status);
             const userStatusOk = !resolvedUserStatus || (t.status === resolvedUserStatus);
-            return nameOk && statusOk && userStatusOk;
+            const batimentOk = !batiment || (Array.isArray(t.batiments) && t.batiments.includes(batiment));
+            return nameOk && statusOk && userStatusOk && batimentOk;
         });
 
         const show = nameMatch || taskMatch;
@@ -6603,14 +7153,14 @@ document.addEventListener('keydown', e => {
 });
 // Initialize the application
 (async function init() {
-    console.log('═══════════════════════════════════════════════════════');
+    dbg('═══════════════════════════════════════════════════════');
     console.log('🚀 [Application] Initialisation de l\'application...');
-    console.log('═══════════════════════════════════════════════════════');
+    dbg('═══════════════════════════════════════════════════════');
 
     const loadingOverlay = document.getElementById('loadingOverlay');
 
     // Initialize Firebase connection (no listener yet — avoids race with initial load)
-    console.log('🔵 [Application] Étape 1/5: Initialisation de la connexion Firebase');
+    dbg('🔵 [Application] Étape 1/5: Initialisation de la connexion Firebase');
     initFirebaseSync();
 
     // Vérifier que Firebase est configuré
@@ -6622,17 +7172,17 @@ document.addEventListener('keydown', e => {
     }
 
     try {
-        console.log('🔵 [Application] Étape 2/5: Chargement des préférences utilisateur');
+        dbg('🔵 [Application] Étape 2/5: Chargement des préférences utilisateur');
         // Charger les préférences utilisateur (thème, KPI config)
         await loadThemePreference();
         kpiConfig = await loadKpiConfig();
 
-        console.log('🔵 [Application] Étape 3/5: Chargement des données de planning');
+        dbg('🔵 [Application] Étape 3/5: Chargement des données de planning');
         const loaded = await loadFromStorage();
 
         if (loaded) {
-            console.log('✅ [Application] Données chargées avec succès');
-            console.log('✅ [Application] Mode Firebase activé');
+            dbg('✅ [Application] Données chargées avec succès');
+            dbg('✅ [Application] Mode Firebase activé');
         } else {
             console.log('⚠️ [Application] Aucune donnée trouvée, initialisation avec données par défaut');
             viewStart = startOfMonth(today);
@@ -6644,25 +7194,25 @@ document.addEventListener('keydown', e => {
         viewStart = startOfMonth(today);
     } finally {
         loadingOverlay.classList.add('hidden');
-        console.log('✅ [Application] Overlay de chargement masqué');
+        dbg('✅ [Application] Overlay de chargement masqué');
     }
 
-    console.log('🔵 [Application] Étape 4/5: Rendu de l\'interface');
+    dbg('🔵 [Application] Étape 4/5: Rendu de l\'interface');
     render();
     updateUndoButtons();
 
     // Start real-time listener AFTER initial load to avoid race conditions
-    console.log('🔵 [Application] Étape 5/6: Démarrage du listener temps réel Firebase');
+    dbg('🔵 [Application] Étape 5/6: Démarrage du listener temps réel Firebase');
     await startFirebaseListener();
 
     // Register presence (non-blocking — failures don't affect the app)
-    console.log('🔵 [Application] Étape 6/6: Enregistrement de la présence utilisateur');
+    dbg('🔵 [Application] Étape 6/6: Enregistrement de la présence utilisateur');
     await startPresence();
 
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('✅ [Application] Initialisation terminée avec succès!');
-    console.log('✅ [Application] Utilisateur:', _currentUserName || '(chargement…)');
-    console.log('═══════════════════════════════════════════════════════');
+    dbg('═══════════════════════════════════════════════════════');
+    dbg('✅ [Application] Initialisation terminée avec succès!');
+    dbg('✅ [Application] Utilisateur:', _currentUserName || '(chargement…)');
+    dbg('═══════════════════════════════════════════════════════');
 })();
 </script>
 </body>
