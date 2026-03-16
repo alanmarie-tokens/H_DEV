@@ -433,6 +433,37 @@
         }
         .row-color-picker.open { display: grid; }
 
+        .row-color-custom-wrap {
+            grid-column: 1 / -1;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            padding-top: 5px;
+            border-top: 1px solid var(--border-subtle);
+            margin-top: 2px;
+        }
+        .row-color-custom-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+        }
+        .row-color-custom-input {
+            width: 26px;
+            height: 18px;
+            padding: 0;
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            background: transparent;
+            cursor: pointer;
+        }
+        .row-color-custom-input::-webkit-color-swatch-wrapper { padding: 0; }
+        .row-color-custom-input::-webkit-color-swatch {
+            border: none;
+            border-radius: 3px;
+        }
+
         .row-color-swatch {
             width: 18px;
             height: 18px;
@@ -467,7 +498,7 @@
             align-items: center;
             justify-content: center;
             cursor: grab;
-            opacity: 0;
+            opacity: 0.5;
             transition: opacity 0.12s;
             color: var(--text-muted);
             font-size: 12px;
@@ -5022,7 +5053,7 @@ function buildRowDiv(row, colW, trackW, isChild) {
     // Grip handle for drag-and-drop
     const grip = document.createElement('div');
     grip.className = 'row-grip';
-    grip.textContent = '⋮⋮';
+    grip.textContent = '⋮⋮⋮⋮';
     grip.title = 'Glisser pour réorganiser';
 
     const dot = document.createElement('div');
@@ -5565,6 +5596,26 @@ function ensureRowColorPicker() {
         picker.appendChild(sw);
     });
 
+    const customWrap = document.createElement('div');
+    customWrap.className = 'row-color-custom-wrap';
+
+    const customLabel = document.createElement('span');
+    customLabel.className = 'row-color-custom-label';
+    customLabel.textContent = 'Couleur RVB';
+
+    const customInput = document.createElement('input');
+    customInput.type = 'color';
+    customInput.className = 'row-color-custom-input';
+    customInput.id = 'rowColorCustomInput';
+    customInput.title = 'Choisir une couleur personnalisée';
+    customInput.addEventListener('input', e => {
+        if (rowColorPickerRowId === null) return;
+        applyRowColor(rowColorPickerRowId, e.target.value);
+    });
+
+    customWrap.append(customLabel, customInput);
+    picker.appendChild(customWrap);
+
     document.body.appendChild(picker);
     return picker;
 }
@@ -5583,9 +5634,12 @@ function openRowColorPicker(rowId, anchorEl) {
     rowColorPickerRowId = row.id;
 
     const currentColor = row.color || TASK_COLORS[0];
+    const pickerColor = normalizeColorForPicker(currentColor);
     picker.querySelectorAll('.row-color-swatch').forEach(sw => {
         sw.classList.toggle('selected', sw.dataset.color === currentColor);
     });
+    const customInput = document.getElementById('rowColorCustomInput');
+    if (customInput) customInput.value = pickerColor;
 
     picker.classList.add('open');
     const rect = anchorEl.getBoundingClientRect();
@@ -5600,6 +5654,30 @@ function openRowColorPicker(rowId, anchorEl) {
 
     picker.style.left = left + 'px';
     picker.style.top = top + 'px';
+}
+
+function normalizeColorForPicker(color) {
+    if (!color) return TASK_COLORS[0];
+
+    const v = String(color).trim();
+    if (/^#[0-9a-fA-F]{6}$/.test(v)) return v.toLowerCase();
+    if (/^#[0-9a-fA-F]{3}$/.test(v)) {
+        return ('#' + v[1] + v[1] + v[2] + v[2] + v[3] + v[3]).toLowerCase();
+    }
+
+    const rgbMatch = v.match(/^rgba?\(([^)]+)\)$/i);
+    if (rgbMatch) {
+        const parts = rgbMatch[1].split(',').map(p => parseFloat(p.trim()));
+        if (parts.length >= 3) {
+            const toHex = n => {
+                const clamped = Math.max(0, Math.min(255, Math.round(n)));
+                return clamped.toString(16).padStart(2, '0');
+            };
+            return '#' + toHex(parts[0]) + toHex(parts[1]) + toHex(parts[2]);
+        }
+    }
+
+    return TASK_COLORS[0];
 }
 
 function applyRowColor(rowId, color) {
