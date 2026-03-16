@@ -385,7 +385,8 @@
         .row-label {
             min-width: var(--label-w);
             width: var(--label-w);
-            display: flex;
+            display: grid;
+            grid-template-columns: 16px 6px minmax(0, 1fr) auto auto auto;
             align-items: center;
             padding: 0 10px 0 14px;
             border-right: 1px solid var(--border);
@@ -410,6 +411,7 @@
             font-size: 12px;
             font-family: var(--font);
             width: 100%;
+            min-width: 0;
             outline: none;
         }
         .row-label input::placeholder { color: var(--text-muted); }
