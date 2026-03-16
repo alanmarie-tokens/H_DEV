@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planning Gantt v0.1</title>
+    <title>Planning Gantt v0.2</title>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -2729,6 +2729,858 @@
         .m-creator-dot {
             width:10px; height:10px; border-radius:50%; flex-shrink:0;
         }
+
+        /* ══ ACTIVITY SPLIT (Gestion courante vs Développement) ══ */
+        .db-split-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 10px;
+            margin-bottom: 4px;
+        }
+        .db-split-card {
+            border-radius: 8px;
+            padding: 16px 18px;
+            position: relative;
+            overflow: hidden;
+        }
+        .db-split-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+        .db-split-title {
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+        }
+        .db-split-pct-badge {
+            font-size: 10px;
+            padding: 2px 9px;
+            border-radius: 10px;
+            font-family: 'Geist Mono', monospace;
+            font-weight: 500;
+        }
+        .db-split-metrics {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 10px;
+            margin-bottom: 12px;
+        }
+        .db-split-metric-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            margin-bottom: 3px;
+        }
+        .db-split-metric-value {
+            font-family: 'Geist Mono', monospace;
+            font-size: 20px;
+        }
+        .db-split-bar {
+            height: 3px;
+            background: rgba(255,255,255,0.1);
+            border-radius: 2px;
+            overflow: hidden;
+            margin-bottom: 6px;
+        }
+        .db-split-bar-fill {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.4s ease;
+        }
+        .db-split-footer {
+            display: flex;
+            justify-content: space-between;
+            font-size: 10px;
+        }
+
+        /* ── Comparison bar for side-by-side visual ── */
+        .db-split-compare {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px 18px;
+            margin-top: 10px;
+        }
+        .db-split-compare-title {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        .db-split-compare-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .db-split-compare-label {
+            font-size: 11px;
+            color: var(--text-soft);
+            min-width: 160px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .db-split-compare-track {
+            flex: 1;
+            height: 6px;
+            background: var(--border);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+        .db-split-compare-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+        .db-split-compare-val {
+            font-family: 'Geist Mono', monospace;
+            font-size: 10px;
+            color: var(--text-soft);
+            min-width: 40px;
+            text-align: right;
+        }
+
+        /* ══ EXPORT REPORT BUTTONS ══ */
+        .db-report-export-btns {
+            display: flex;
+            gap: 6px;
+        }
+        .db-report-export-btn {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text-dim);
+            padding: 4px 11px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 11px;
+            font-family: var(--font);
+            font-weight: 500;
+            transition: all 0.12s;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .db-report-export-btn:hover { border-color: var(--text-muted); color: var(--text); }
+        .db-report-export-btn.csv:hover { border-color: var(--success); color: var(--success); }
+        .db-report-export-btn.pdf:hover { border-color: var(--warning); color: var(--warning); }
+
+        /* ══ PRINT STYLES ══ */
+        @media print {
+            body * { visibility: hidden; }
+            #reportPrintArea, #reportPrintArea * { visibility: visible; }
+            #reportPrintArea { position: fixed; inset: 0; background: white; padding: 24px; }
+        }
+
+        /* ══ TEMPORAL BREADCRUMB BAR ══ */
+        .time-breadcrumb {
+            height: 28px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 0 0 var(--label-w);
+            flex-shrink: 0;
+            overflow: hidden;
+            position: relative;
+            gap: 0;
+        }
+        .time-breadcrumb.hidden { display: none; }
+
+        .tbc-inner {
+            flex: 1;
+            position: relative;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            overflow: hidden;
+            margin-right: var(--recap-w);
+        }
+
+        /* Year segments */
+        .tbc-year {
+            position: absolute;
+            top: 0; bottom: 0;
+            display: flex;
+            align-items: center;
+            border-right: 1px solid var(--border-subtle);
+            overflow: hidden;
+        }
+        .tbc-year-label {
+            font-size: 9px;
+            font-family: var(--mono);
+            color: var(--text-muted);
+            padding: 0 5px;
+            white-space: nowrap;
+            user-select: none;
+        }
+        .tbc-year.is-current .tbc-year-label { color: var(--text-dim); }
+
+        /* Month ticks (fine vertical lines) */
+        .tbc-tick {
+            position: absolute;
+            top: 50%; bottom: 0;
+            width: 1px;
+            background: var(--border-subtle);
+            opacity: 0.5;
+        }
+
+        /* Viewport window (the highlighted zone) */
+        .tbc-window {
+            position: absolute;
+            top: 3px; bottom: 3px;
+            border-radius: 3px;
+            background: var(--accent);
+            opacity: 0.18;
+            pointer-events: none;
+            transition: left 0.25s ease, width 0.25s ease;
+        }
+        .tbc-window-border {
+            position: absolute;
+            top: 3px; bottom: 3px;
+            border-radius: 3px;
+            border: 1px solid var(--accent);
+            opacity: 0.5;
+            pointer-events: none;
+            transition: left 0.25s ease, width 0.25s ease;
+        }
+
+        /* Today tick on breadcrumb */
+        .tbc-today-tick {
+            position: absolute;
+            top: 0; bottom: 0;
+            width: 2px;
+            background: var(--accent);
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        .tbc-today-label {
+            position: absolute;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 8px;
+            font-family: var(--mono);
+            color: var(--accent);
+            white-space: nowrap;
+            background: var(--surface);
+            padding: 0 2px;
+            pointer-events: none;
+        }
+
+        /* Clickable months on breadcrumb */
+        .tbc-month-hit {
+            position: absolute;
+            top: 0; bottom: 0;
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .tbc-month-hit:hover { background: rgba(99,102,241,0.07); }
+
+        /* ══ ENHANCED PERIOD DISPLAY ══ */
+        .period-display {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
+            min-width: 170px;
+            padding: 4px 13px;
+        }
+        .period-main {
+            font-family: var(--mono);
+            font-size: 11px;
+            font-weight: 500;
+            color: var(--text-soft);
+            white-space: nowrap;
+            letter-spacing: 0.01em;
+        }
+        .period-sub {
+            font-size: 9px;
+            color: var(--text-muted);
+            font-family: var(--font);
+            white-space: nowrap;
+        }
+        .period-display.is-today-visible .period-main { color: var(--accent); }
+
+        /* ══ TODAY BUTTON PULSE (when today is out of view) ══ */
+        @keyframes todayPulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0); }
+            50% { box-shadow: 0 0 0 3px rgba(99,102,241,0.3); }
+        }
+        #btnToday.out-of-view {
+            border-color: var(--accent) !important;
+            color: var(--accent) !important;
+            animation: todayPulse 2s ease-in-out infinite;
+        }
+
+        /* ══ ZOOM GROUP — visual grouping short/long ══ */
+        .zoom-group {
+            display: flex;
+            gap: 0;
+            position: relative;
+        }
+        .zoom-sep-inner {
+            width: 1px;
+            background: var(--border);
+            align-self: stretch;
+            margin: 3px 0;
+        }
+
+        /* ══ NAV ARROW BUTTONS ══ */
+        #btnPrev, #btnNext {
+            min-width: 28px;
+            font-size: 11px;
+            padding: 5px 9px;
+        }
+        #btnPrev:disabled, #btnNext:disabled { opacity: 0.3; cursor: default; }
+
+        /* ══ MODAL 2-LEVEL REDESIGN ══ */
+
+        /* Wider modal */
+        .modal { width: 460px; padding: 0; overflow: hidden; }
+
+        /* Task bar preview strip */
+        .modal-preview {
+            height: 48px;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            padding: 0 18px;
+            gap: 10px;
+            position: relative;
+            overflow: hidden;
+        }
+        .modal-preview-bar {
+            height: 26px;
+            border-radius: 5px;
+            flex: 1;
+            display: flex;
+            align-items: center;
+            padding: 0 10px;
+            transition: background 0.2s;
+            overflow: hidden;
+            position: relative;
+        }
+        .modal-preview-name {
+            font-size: 11px;
+            font-weight: 500;
+            color: rgba(255,255,255,0.9);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            flex: 1;
+        }
+        .modal-preview-dates {
+            font-size: 9px;
+            font-family: var(--mono);
+            color: rgba(255,255,255,0.55);
+            white-space: nowrap;
+            margin-left: 8px;
+        }
+        .modal-preview-progress {
+            position: absolute;
+            bottom: 0; left: 0;
+            height: 3px;
+            background: rgba(255,255,255,0.55);
+            border-radius: 0 0 0 5px;
+            transition: width 0.2s;
+        }
+        .modal-preview-label {
+            font-size: 9px;
+            font-family: var(--mono);
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            flex-shrink: 0;
+        }
+
+        /* Modal body scroll area */
+        .modal-body { padding: 18px 20px; max-height: calc(90vh - 120px); overflow-y: auto; }
+        .modal-body::-webkit-scrollbar { width: 4px; }
+        .modal-body::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+        /* Modal header row */
+        .modal-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 16px;
+        }
+        .modal-header h2 { font-size: 13px; font-weight: 600; color: var(--text); letter-spacing: -0.01em; margin: 0; }
+        .modal-close-btn {
+            background: none; border: none; color: var(--text-muted); font-size: 18px;
+            cursor: pointer; padding: 0 2px; line-height: 1; transition: color 0.12s;
+        }
+        .modal-close-btn:hover { color: var(--text); }
+
+        /* Section separator label inside modal */
+        .modal-section-sep {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin: 14px 0 12px;
+        }
+        .modal-section-sep-line {
+            flex: 1; height: 1px;
+            background: var(--border-subtle);
+        }
+        .modal-section-sep-label {
+            font-size: 9px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        /* Advanced accordion toggle */
+        .modal-advanced-toggle {
+            width: 100%;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-dim);
+            padding: 7px 12px;
+            font-size: 11px;
+            font-family: var(--font);
+            font-weight: 500;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 6px;
+            transition: all 0.12s;
+            margin-top: 4px;
+            letter-spacing: 0.01em;
+        }
+        .modal-advanced-toggle:hover { border-color: var(--text-muted); color: var(--text); }
+        .modal-advanced-toggle.open { border-color: var(--accent); color: var(--accent); background: var(--accent-dim); }
+        .modal-advanced-toggle .adv-chevron {
+            font-size: 10px;
+            transition: transform 0.2s;
+            flex-shrink: 0;
+        }
+        .modal-advanced-toggle.open .adv-chevron { transform: rotate(180deg); }
+        .modal-advanced-toggle .adv-badge {
+            background: var(--accent);
+            color: white;
+            font-size: 9px;
+            font-family: var(--mono);
+            padding: 1px 5px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+
+        /* Advanced section collapsible */
+        .modal-advanced-body {
+            display: none;
+            padding-top: 12px;
+        }
+        .modal-advanced-body.open { display: block; }
+
+        /* Inline 2-col layout for métier + bâtiments */
+        .modal-2col { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        @media (max-width: 480px) { .modal-2col { grid-template-columns: 1fr; } }
+
+        /* Compact status selector */
+        .status-selector { display: flex; gap: 5px; flex-wrap: wrap; }
+        .status-pill {
+            display: flex; align-items: center; gap: 5px;
+            padding: 5px 11px;
+            border-radius: 20px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text-dim);
+            font-size: 11px;
+            font-family: var(--font);
+            cursor: pointer;
+            transition: all 0.12s;
+            white-space: nowrap;
+        }
+        .status-pill:hover { border-color: var(--text-muted); color: var(--text); }
+        .status-pill.active { border-color: currentColor; }
+        .status-pill-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
+
+        /* Compact field label */
+        .field label {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--text-muted);
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+
+        /* Modal footer */
+        .modal-footer {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 20px;
+            border-top: 1px solid var(--border);
+            background: var(--surface);
+        }
+        .modal-footer-meta {
+            font-size: 10px;
+            color: var(--text-muted);
+        }
+        .modal-footer-actions { display: flex; gap: 8px; }
+
+        /* ══ QUICK ADD BUTTON ON ROW ══ */
+        .row-quick-add-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+            padding: 0 2px;
+            opacity: 0;
+            transition: opacity 0.12s, color 0.12s;
+            flex-shrink: 0;
+            font-weight: 400;
+            border-radius: 3px;
+        }
+        .gantt-row:hover .row-quick-add-btn { opacity: 1; }
+        .row-quick-add-btn:hover { color: var(--accent); background: var(--accent-dim); }
+
+        /* ══ QUICK ADD POPOVER ══ */
+        .quick-add-popover {
+            position: fixed;
+            z-index: 2000;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.6), 0 2px 8px rgba(0,0,0,0.3);
+            padding: 14px 16px;
+            width: 310px;
+            animation: qaFadeIn 0.14s ease;
+            display: none;
+        }
+        .quick-add-popover.open { display: block; }
+
+        @keyframes qaFadeIn {
+            from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+            to   { opacity: 1; transform: none; }
+        }
+
+        .qa-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 11px;
+        }
+        .qa-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-soft);
+            letter-spacing: 0.01em;
+        }
+        .qa-row-badge {
+            font-size: 10px;
+            color: var(--text-muted);
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 2px 8px;
+            border-radius: 20px;
+            max-width: 120px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .qa-close {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 16px;
+            line-height: 1;
+            padding: 0 2px;
+            transition: color 0.1s;
+        }
+        .qa-close:hover { color: var(--text); }
+
+        .qa-name-input {
+            width: 100%;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 11px;
+            border-radius: var(--radius-sm);
+            font-size: 13px;
+            font-family: var(--font);
+            outline: none;
+            transition: border-color 0.12s;
+            margin-bottom: 10px;
+        }
+        .qa-name-input:focus { border-color: var(--accent); }
+        .qa-name-input::placeholder { color: var(--text-muted); }
+
+        .qa-dates {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .qa-date-field {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .qa-date-label {
+            font-size: 9px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+        }
+        .qa-date-input {
+            width: 100%;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 9px;
+            border-radius: var(--radius-sm);
+            font-size: 11px;
+            font-family: var(--mono);
+            outline: none;
+            transition: border-color 0.12s;
+        }
+        .qa-date-input:focus { border-color: var(--accent); }
+
+        .qa-colors {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+        .qa-color-swatch {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: border-color 0.1s, transform 0.1s;
+            flex-shrink: 0;
+        }
+        .qa-color-swatch.selected { border-color: white; transform: scale(1.2); }
+
+        .qa-actions {
+            display: flex;
+            gap: 7px;
+            justify-content: flex-end;
+        }
+        .qa-hint {
+            font-size: 9px;
+            color: var(--text-muted);
+            margin-right: auto;
+            align-self: center;
+            font-family: var(--mono);
+        }
+
+        /* ══ BACKLOG PANEL ══ */
+        .backlog-panel {
+            flex-shrink: 0;
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            transition: height 0.2s ease;
+        }
+
+        .backlog-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 0 16px;
+            height: 36px;
+            cursor: pointer;
+            user-select: none;
+            flex-shrink: 0;
+        }
+        .backlog-header:hover { background: rgba(255,255,255,0.02); }
+
+        .backlog-toggle-icon {
+            font-size: 9px;
+            color: var(--text-muted);
+            transition: transform 0.18s;
+            flex-shrink: 0;
+        }
+        .backlog-panel.open .backlog-toggle-icon { transform: rotate(180deg); }
+
+        .backlog-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-soft);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .backlog-count {
+            font-size: 10px;
+            font-family: var(--mono);
+            color: var(--text-muted);
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            padding: 1px 7px;
+            border-radius: 20px;
+        }
+        .backlog-count.has-items { color: var(--accent); border-color: rgba(99,102,241,0.3); background: var(--accent-dim); }
+
+        .backlog-add-btn {
+            margin-left: auto;
+            background: none;
+            border: 1px dashed var(--border);
+            color: var(--text-muted);
+            padding: 3px 11px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 11px;
+            font-family: var(--font);
+            transition: all 0.12s;
+        }
+        .backlog-add-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+        .backlog-body {
+            display: none;
+            padding: 0 16px 12px;
+            gap: 8px;
+            flex-direction: column;
+        }
+        .backlog-panel.open .backlog-body { display: flex; }
+
+        .backlog-hint {
+            font-size: 11px;
+            color: var(--text-muted);
+            padding: 6px 0 2px;
+            font-style: italic;
+        }
+
+        .backlog-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            min-height: 32px;
+            padding: 4px 0;
+        }
+
+        .backlog-empty {
+            font-size: 11px;
+            color: var(--text-muted);
+            font-style: italic;
+            padding: 4px 0;
+            align-self: center;
+        }
+
+        .backlog-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 7px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 4px 10px 4px 8px;
+            cursor: grab;
+            font-size: 12px;
+            color: var(--text-soft);
+            transition: border-color 0.12s, background 0.12s, box-shadow 0.12s;
+            user-select: none;
+        }
+        .backlog-chip:hover { border-color: var(--text-muted); background: var(--surface3); box-shadow: 0 2px 8px rgba(0,0,0,0.3); }
+        .backlog-chip.dragging-chip { opacity: 0.45; cursor: grabbing; }
+
+        .backlog-chip-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            flex-shrink: 0;
+        }
+
+        .backlog-chip-name {
+            max-width: 180px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .backlog-chip-plan {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 11px;
+            padding: 0;
+            line-height: 1;
+            transition: color 0.1s;
+            flex-shrink: 0;
+        }
+        .backlog-chip-plan:hover { color: var(--accent); }
+
+        .backlog-chip-del {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 13px;
+            padding: 0;
+            line-height: 1;
+            transition: color 0.1s;
+            flex-shrink: 0;
+        }
+        .backlog-chip-del:hover { color: var(--danger); }
+
+        /* Inline add input */
+        .backlog-add-row {
+            display: none;
+            align-items: center;
+            gap: 7px;
+            margin-top: 4px;
+        }
+        .backlog-add-row.visible { display: flex; }
+
+        .backlog-inline-input {
+            flex: 1;
+            background: var(--surface2);
+            border: 1px solid var(--accent);
+            color: var(--text);
+            padding: 6px 11px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-family: var(--font);
+            outline: none;
+        }
+        .backlog-inline-input::placeholder { color: var(--text-muted); }
+
+        /* Drop target highlight on gantt rows during backlog drag */
+        .gantt-row.backlog-drop-target {
+            background: var(--accent-glow) !important;
+            outline: 1px solid rgba(99,102,241,0.4);
+        }
+
+        /* Ghost chip that follows cursor */
+        .backlog-drag-ghost {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            background: var(--surface);
+            border: 1px solid var(--accent);
+            border-radius: 20px;
+            padding: 4px 12px 4px 10px;
+            font-size: 12px;
+            color: var(--text);
+            display: flex;
+            align-items: center;
+            gap: 7px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            opacity: 0.9;
+            transform: translate(-50%, -50%);
+        }
     </style>
 </head>
 <!-- Firebase Realtime Database SDK (loaded only when needed) -->
@@ -2764,26 +3616,35 @@
     <button class="tab-btn" id="tabDashboard" data-tab="dashboard">Dashboard</button>
     <div style="flex:1"></div>
     <!-- Gantt-only controls -->
-    <div id="ganttControls" style="display:flex;align-items:center;gap:8px;">
-        <button class="nav-btn" id="btnPrev">◀</button>
-        <div class="period-display" id="periodDisplay">—</div>
-        <button class="nav-btn" id="btnNext">▶</button>
-        <button class="nav-btn" id="btnToday">Aujourd'hui</button>
+    <div id="ganttControls" style="display:flex;align-items:center;gap:6px;">
+        <button class="nav-btn" id="btnPrev" title="Période précédente (←)">◀</button>
+        <div class="period-display" id="periodDisplay" title="Cliquer pour naviguer rapidement">
+            <span class="period-main" id="periodMain">—</span>
+            <span class="period-sub" id="periodSub"></span>
+        </div>
+        <button class="nav-btn" id="btnNext" title="Période suivante (→)">▶</button>
+        <button class="nav-btn" id="btnToday" title="Revenir à aujourd'hui (T)">Aujourd'hui</button>
         <div class="sep"></div>
         <div class="zoom-group">
-            <button class="zoom-btn" data-zoom="currentweek">Cette sem.</button>
-            <button class="zoom-btn" data-zoom="week">Sem.</button>
-            <button class="zoom-btn active" data-zoom="month">Mois</button>
-            <button class="zoom-btn" data-zoom="quarter">Trim.</button>
-            <button class="zoom-btn" data-zoom="year">Année</button>
+            <button class="zoom-btn" data-zoom="currentweek" title="Cette semaine">Cette sem.</button>
+            <button class="zoom-btn" data-zoom="week" title="Vue 8 semaines">Sem.</button>
+            <div class="zoom-sep-inner"></div>
+            <button class="zoom-btn active" data-zoom="month" title="Vue 12 mois">Mois</button>
+            <button class="zoom-btn" data-zoom="quarter" title="Vue trimestrielle">Trim.</button>
+            <button class="zoom-btn" data-zoom="year" title="Vue annuelle">Année</button>
         </div>
         <div class="sep"></div>
         <button class="nav-btn" id="btnAddGroup">+ Groupe</button>
         <button class="nav-btn" id="btnAddMilestone" title="Ajouter un jalon">◆ Jalon</button>
         <button class="nav-btn" id="btnToggleHistogram" title="Histogramme de charge">📊 Charge</button>
-        <button class="nav-btn" id="btnToggleFilter" title="Filtres">🔍 Filtres</button>
+        <button class="nav-btn" id="btnToggleFilter" title="Filtres (Ctrl+F)">🔍 Filtres</button>
         <button class="btn-primary" id="btnAddRow">+ Ligne</button>
     </div>
+</div>
+
+<!-- Temporal breadcrumb — shows full planning extent with current view window -->
+<div class="time-breadcrumb hidden" id="timeBreadcrumb">
+    <div class="tbc-inner" id="tbcInner"></div>
 </div>
 
 <div class="filter-bar hidden" id="filterBar">
@@ -2847,106 +3708,210 @@
         </div>
     </div>
 </div>
+
+<!-- ══ BACKLOG PANEL ══ -->
+<div class="backlog-panel" id="backlogPanel">
+    <div class="backlog-header" id="backlogHeader">
+        <span class="backlog-toggle-icon">▼</span>
+        <span class="backlog-title">File d'attente</span>
+        <span class="backlog-count" id="backlogCount">0</span>
+        <button class="backlog-add-btn" id="backlogAddBtn" title="Ajouter une tâche en attente">+ Ajouter</button>
+    </div>
+    <div class="backlog-body">
+        <div class="backlog-chips" id="backlogChips">
+            <span class="backlog-empty" id="backlogEmpty">Aucune tâche en attente</span>
+        </div>
+        <div class="backlog-add-row" id="backlogAddRow">
+            <input class="backlog-inline-input" id="backlogInlineInput" type="text" placeholder="Nom de la tâche… (Entrée pour valider, Échap pour annuler)" autocomplete="off">
+            <button class="btn-primary" id="backlogInlineConfirm" style="padding:5px 12px;font-size:11px;flex-shrink:0">Ajouter</button>
+        </div>
+    </div>
+</div>
+
 </div> <!-- end viewGantt -->
 
 <div class="view dashboard-view" id="viewDashboard">
     <div id="dashboardBody" style="display:flex;flex-direction:column;gap:24px;max-width:1200px;width:100%;margin:0 auto;"></div>
 </div>
 
-<!-- Modal -->
+<!-- Modal — 2-level structure -->
 <div class="modal-overlay" id="modalOverlay">
     <div class="modal">
-        <h2 id="mTitle">Nouvelle tâche</h2>
-        <div class="field">
-            <label>Nom de la tâche</label>
-            <input type="text" id="mTaskName" placeholder="Ex: Phase de conception">
-        </div>
-        <div class="field" style="position:relative">
-            <label>Métier</label>
-            <input type="text" id="mMetier" placeholder="Ex: Électricité, Plomberie…" autocomplete="off">
-            <div id="mMetierSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-md);z-index:9999;overflow:hidden;"></div>
-        </div>
-        <div class="field" style="position:relative">
-            <label>Bâtiments</label>
-            <div class="batiment-tags-wrap" id="mBatimentsWrap">
-                <input class="batiment-input" id="mBatimentInput" placeholder="Ajouter un bâtiment…" autocomplete="off">
+
+        <!-- Live preview bar -->
+        <div class="modal-preview">
+            <span class="modal-preview-label">Aperçu</span>
+            <div class="modal-preview-bar" id="mPreviewBar">
+                <span class="modal-preview-name" id="mPreviewName">Nouvelle tâche</span>
+                <span class="modal-preview-dates" id="mPreviewDates"></span>
+                <div class="modal-preview-progress" id="mPreviewProgress" style="width:0%"></div>
             </div>
-            <div id="mBatimentSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-md);z-index:9999;overflow:hidden;margin-top:2px;"></div>
         </div>
-        <div class="form-row">
+
+        <!-- Scrollable body -->
+        <div class="modal-body">
+            <!-- Header -->
+            <div class="modal-header">
+                <h2 id="mTitle">Nouvelle tâche</h2>
+                <button class="modal-close-btn" id="mCloseBtn" title="Fermer (Échap)">×</button>
+            </div>
+
+            <!-- ── ESSENTIEL ── -->
             <div class="field">
-                <label>Début</label>
-                <input type="date" id="mStartDate">
+                <label>Nom de la tâche</label>
+                <input type="text" id="mTaskName" placeholder="Ex: Phase de conception">
             </div>
-            <div class="field">
-                <label>Fin</label>
-                <input type="date" id="mEndDate">
+
+            <!-- Champ Ligne — visible uniquement lors d'une planification depuis le backlog -->
+            <div class="field" id="mRowSelectField" style="display:none">
+                <label>Ligne</label>
+                <select id="mRowSelect" style="width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:8px 11px;border-radius:var(--radius-sm);font-size:12px;font-family:var(--font);outline:none;transition:border-color 0.12s">
+                    <option value="">— Choisir une ligne —</option>
+                </select>
             </div>
-        </div>
-        <div class="form-row">
-            <div class="field">
-                <label>TJM (€/jour)</label>
-                <input type="number" id="mTjm" placeholder="700" min="0" step="50">
-            </div>
-            <div class="field">
-                <label>ETP</label>
-                <input type="number" id="mEtp" placeholder="1.0" min="0" max="10" step="0.1">
-            </div>
-        </div>
-        <!-- Objectives section -->
-        <div class="progress-section">
-            <label>Avancement</label>
-            <div class="progress-slider-wrap">
-                <input type="range" id="mProgress" min="0" max="100" step="1" value="0">
-                <span class="progress-value-badge" id="mProgressVal">0%</span>
-            </div>
-            <div class="progress-bar-preview">
-                <div class="progress-bar-preview-fill" id="mProgressFill" style="width:0%"></div>
-            </div>
-        </div>
-        <div class="field">
-            <label>Statut</label>
-            <div class="status-selector" id="mStatusSelector"></div>
-        </div>
-        <div class="obj-toggle-row" id="objToggleRow">
-            <div class="obj-toggle-switch" id="objToggleSwitch"></div>
-            <span class="obj-toggle-label">Objectifs mesurables dans le temps</span>
-        </div>
-        <div class="obj-collapsible" id="objCollapsible">
-            <div class="obj-section">
-                <div class="obj-section-header">
-                    <span class="obj-section-title">Objectifs</span>
-                    <button class="obj-add-btn" id="mObjAdd">+ Ajouter</button>
+
+            <div class="modal-2col">
+                <div class="field" style="position:relative">
+                    <label>Métier</label>
+                    <input type="text" id="mMetier" placeholder="Électricité…" autocomplete="off">
+                    <div id="mMetierSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-md);z-index:9999;overflow:hidden;"></div>
                 </div>
-                <div id="mObjList"><div class="obj-empty">Aucun objectif — cliquez sur + Ajouter</div></div>
+                <div class="field" style="position:relative">
+                    <label>Bâtiments</label>
+                    <div class="batiment-tags-wrap" id="mBatimentsWrap">
+                        <input class="batiment-input" id="mBatimentInput" placeholder="Ajouter…" autocomplete="off">
+                    </div>
+                    <div id="mBatimentSuggest" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius-sm);box-shadow:var(--shadow-md);z-index:9999;overflow:hidden;margin-top:2px;"></div>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="field">
+                    <label>Début</label>
+                    <input type="date" id="mStartDate">
+                </div>
+                <div class="field">
+                    <label>Fin</label>
+                    <input type="date" id="mEndDate">
+                </div>
+            </div>
+
+            <div class="field">
+                <label>Statut</label>
+                <div class="status-selector" id="mStatusSelector"></div>
+            </div>
+
+            <div class="progress-section">
+                <label style="font-size:10px;text-transform:uppercase;letter-spacing:0.07em;color:var(--text-muted);display:block;margin-bottom:6px;font-weight:500;">Avancement</label>
+                <div class="progress-slider-wrap">
+                    <input type="range" id="mProgress" min="0" max="100" step="1" value="0">
+                    <span class="progress-value-badge" id="mProgressVal">0%</span>
+                </div>
+                <div class="progress-bar-preview">
+                    <div class="progress-bar-preview-fill" id="mProgressFill" style="width:0%"></div>
+                </div>
+            </div>
+
+            <!-- ── AVANCÉ (accordéon) ── -->
+            <button class="modal-advanced-toggle" id="mAdvancedToggle" type="button">
+                <span>⚙ Paramètres avancés</span>
+                <div style="display:flex;align-items:center;gap:6px">
+                    <span class="adv-badge" id="mAdvBadge" style="display:none">0</span>
+                    <span class="adv-chevron">▾</span>
+                </div>
+            </button>
+
+            <div class="modal-advanced-body" id="mAdvancedBody">
+
+                <div class="modal-section-sep">
+                    <div class="modal-section-sep-line"></div>
+                    <span class="modal-section-sep-label">Chiffrage</span>
+                    <div class="modal-section-sep-line"></div>
+                </div>
+
+                <div class="form-row">
+                    <div class="field">
+                        <label>TJM (€/jour)</label>
+                        <input type="number" id="mTjm" placeholder="700" min="0" step="50">
+                    </div>
+                    <div class="field">
+                        <label>ETP</label>
+                        <input type="number" id="mEtp" placeholder="1.0" min="0" max="10" step="0.1">
+                    </div>
+                </div>
+
+                <div class="modal-section-sep">
+                    <div class="modal-section-sep-line"></div>
+                    <span class="modal-section-sep-label">Apparence</span>
+                    <div class="modal-section-sep-line"></div>
+                </div>
+
+                <div class="field">
+                    <label>Couleur</label>
+                    <div class="color-picker" id="colorPicker"></div>
+                </div>
+
+                <div class="modal-section-sep">
+                    <div class="modal-section-sep-line"></div>
+                    <span class="modal-section-sep-label">Détails</span>
+                    <div class="modal-section-sep-line"></div>
+                </div>
+
+                <div class="field">
+                    <label>Notes</label>
+                    <textarea id="mNotes" class="notes-textarea" placeholder="Contexte, détails, liens utiles…"></textarea>
+                </div>
+
+                <!-- Objectives -->
+                <div class="obj-toggle-row" id="objToggleRow">
+                    <div class="obj-toggle-switch" id="objToggleSwitch"></div>
+                    <span class="obj-toggle-label">Objectifs mesurables dans le temps</span>
+                </div>
+                <div class="obj-collapsible" id="objCollapsible">
+                    <div class="obj-section">
+                        <div class="obj-section-header">
+                            <span class="obj-section-title">Objectifs</span>
+                            <button class="obj-add-btn" id="mObjAdd">+ Ajouter</button>
+                        </div>
+                        <div id="mObjList"><div class="obj-empty">Aucun objectif — cliquez sur + Ajouter</div></div>
+                    </div>
+                </div>
+
+                <!-- Dependencies -->
+                <div class="modal-section-sep">
+                    <div class="modal-section-sep-line"></div>
+                    <span class="modal-section-sep-label">Dépendances</span>
+                    <div class="modal-section-sep-line"></div>
+                </div>
+                <div class="dep-section" style="margin-bottom:0">
+                    <div class="dep-section-hdr">
+                        <span class="dep-section-title">Fin → Début</span>
+                        <button class="obj-add-btn" id="mDepAdd">+ Ajouter</button>
+                    </div>
+                    <div id="mDepList"><div class="dep-empty">Aucune dépendance</div></div>
+                    <div id="mDepSelWrap" style="display:none;padding:6px 11px;border-top:1px solid var(--border-subtle)">
+                        <select class="dep-add-sel" id="mDepSel"><option value="">Sélectionner une tâche prédécesseur…</option></select>
+                    </div>
+                </div>
+
+                <!-- Creator -->
+                <div class="field" id="mCreatorRow" style="display:none;margin-top:12px">
+                    <label>Créé par</label>
+                    <div class="m-creator-info"><div class="m-creator-dot" id="mCreatorDot"></div><span id="mCreatorName">—</span></div>
+                </div>
+
+            </div><!-- end mAdvancedBody -->
+        </div><!-- end modal-body -->
+
+        <!-- Sticky footer -->
+        <div class="modal-footer">
+            <div class="modal-footer-meta" id="mFooterMeta"></div>
+            <div class="modal-footer-actions">
+                <button class="btn-ghost" id="mCancel">Annuler</button>
+                <button class="btn-primary" id="mCreate">Enregistrer</button>
             </div>
         </div>
-        <div class="field">
-            <label>Couleur</label>
-            <div class="color-picker" id="colorPicker"></div>
-        </div>
-        <div class="field">
-            <label>Notes</label>
-            <textarea id="mNotes" class="notes-textarea" placeholder="Contexte, détails, liens utiles…"></textarea>
-        </div>
-        <div class="field" id="mCreatorRow" style="display:none">
-            <label>Créé par</label>
-            <div class="m-creator-info"><div class="m-creator-dot" id="mCreatorDot"></div><span id="mCreatorName">—</span></div>
-        </div>
-        <div class="dep-section">
-            <div class="dep-section-hdr">
-                <span class="dep-section-title">Dépendances (Fin→Début)</span>
-                <button class="obj-add-btn" id="mDepAdd">+ Ajouter</button>
-            </div>
-            <div id="mDepList"><div class="dep-empty">Aucune dépendance</div></div>
-            <div id="mDepSelWrap" style="display:none;padding:6px 11px;border-top:1px solid var(--border-subtle)">
-                <select class="dep-add-sel" id="mDepSel"><option value="">Sélectionner une tâche prédécesseur…</option></select>
-            </div>
-        </div>
-        <div class="modal-btns">
-            <button class="btn-ghost" id="mCancel">Annuler</button>
-            <button class="btn-primary" id="mCreate">Enregistrer</button>
-        </div>
+
     </div>
 </div>
 
@@ -3015,6 +3980,8 @@ const ZOOM_CONFIG = {
 let zoom = 'month';
 let viewStart = new Date(); // start of current view window
 let rows = [];
+let backlog = []; // tâches sans dates — file d'attente
+let backlogIdCounter = 0;
 let groups = [
     { id: 1, name: 'Gestion courantes', collapsed: false },
     { id: 2, name: 'Développement', collapsed: false }
@@ -3298,6 +4265,7 @@ function render() {
     renderBody();
     updatePeriodDisplay();
     updateTotalsBar();
+    renderBacklog();
     if (typeof renderExtras === 'function') renderExtras();
 }
 
@@ -3551,7 +4519,14 @@ function buildRowDiv(row, colW, trackW, isChild) {
     del.textContent = '×';
     del.title = 'Supprimer la ligne';
     del.addEventListener('click', () => { pushUndo(); rows = rows.filter(r => r.id !== row.id); render(); });
-    lbl.append(dot, inp, del);
+
+    const qaBtn = document.createElement('button');
+    qaBtn.className = 'row-quick-add-btn';
+    qaBtn.textContent = '+';
+    qaBtn.title = 'Création rapide de tâche';
+    qaBtn.addEventListener('click', e => { e.stopPropagation(); openQuickAdd(row.id, qaBtn); });
+
+    lbl.append(dot, inp, qaBtn, del);
 
     // Track
     const track = document.createElement('div');
@@ -4349,17 +5324,182 @@ document.querySelectorAll('.zoom-btn').forEach(btn => {
 
 function updatePeriodDisplay() {
     const vs = viewRangeStart();
-    const ve = viewRangeEnd();
+    const ve = addDays(viewRangeEnd(), -1);
+
+    const fmtShort = d => d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short' });
+    const fmtFull  = d => d.toLocaleDateString('fr-FR', { day: '2-digit', month: 'short', year: 'numeric' });
+    const fmtMonth = d => `${MONTHS_FR[d.getMonth()]} ${d.getFullYear()}`;
+
+    let mainText = '';
+    let subText  = '';
+
     if (zoom === 'currentweek') {
         const ws = startOfWeek(today);
         const we = addDays(ws, 6);
-        document.getElementById('periodDisplay').textContent =
-            `${ws.toLocaleDateString('fr-FR',{day:'2-digit',month:'short'})} – ${we.toLocaleDateString('fr-FR',{day:'2-digit',month:'short',year:'numeric'})}`;
-        return;
+        mainText = `${fmtShort(ws)} – ${fmtFull(we)}`;
+        subText  = 'Semaine en cours';
+    } else if (zoom === 'week') {
+        const ws = viewRangeStart();
+        const we = addDays(viewRangeEnd(), -1);
+        mainText = `${fmtShort(ws)} – ${fmtFull(we)}`;
+        subText  = '8 semaines';
+    } else if (zoom === 'month') {
+        mainText = `${fmtMonth(vs)} – ${fmtMonth(ve)}`;
+        subText  = '12 mois';
+    } else if (zoom === 'quarter') {
+        mainText = `${vs.getFullYear()} – ${ve.getFullYear()}`;
+        subText  = '4 ans · vue trimestrielle';
+    } else {
+        mainText = `${vs.getFullYear()} – ${ve.getFullYear()}`;
+        subText  = '4 ans · vue annuelle';
     }
-    const fmt = d => `${MONTHS_FR[d.getMonth()]} ${d.getFullYear()}`;
-    document.getElementById('periodDisplay').textContent = fmt(vs) + ' – ' + fmt(addDays(ve,-1));
+
+    document.getElementById('periodMain').textContent = mainText;
+    document.getElementById('periodSub').textContent  = subText;
+
+    // Highlight if today is in current view
+    const todayInView = today >= viewRangeStart() && today <= viewRangeEnd();
+    document.getElementById('periodDisplay').classList.toggle('is-today-visible', todayInView);
+
+    // Today button: pulse when today is out of view
+    document.getElementById('btnToday').classList.toggle('out-of-view', !todayInView);
+
+    // Update breadcrumb
+    updateTimeBreadcrumb();
 }
+
+// ─── TEMPORAL BREADCRUMB ─────────────────────────────────
+function updateTimeBreadcrumb() {
+    const bc = document.getElementById('timeBreadcrumb');
+    const inner = document.getElementById('tbcInner');
+
+    // Only show when there are tasks or we have meaningful range
+    const allTasks = rows.flatMap(r => r.tasks);
+    if (allTasks.length === 0) { bc.classList.add('hidden'); return; }
+    bc.classList.remove('hidden');
+
+    // Compute overall data extent (min task start, max task end)
+    let minTs = Infinity, maxTs = -Infinity;
+    allTasks.forEach(t => {
+        const ts = new Date(t.start).getTime();
+        const te = new Date(t.end).getTime();
+        if (ts < minTs) minTs = ts;
+        if (te > maxTs) maxTs = te;
+    });
+
+    // Expand to full year boundaries and add 1 year padding each side
+    const minDate = new Date(new Date(minTs).getFullYear() - 1, 0, 1);
+    const maxDate = new Date(new Date(maxTs).getFullYear() + 2, 0, 1);
+    const totalMs = maxDate.getTime() - minDate.getTime();
+
+    inner.innerHTML = '';
+
+    // Helper: position in % across the breadcrumb
+    const toPct = d => ((d.getTime() - minDate.getTime()) / totalMs) * 100;
+
+    // Draw year bands + month ticks
+    let y = minDate.getFullYear();
+    while (y <= maxDate.getFullYear()) {
+        const yStart = new Date(y, 0, 1);
+        const yEnd   = new Date(y + 1, 0, 1);
+        const left  = toPct(yStart);
+        const width = toPct(yEnd) - left;
+
+        const band = document.createElement('div');
+        band.className = 'tbc-year' + (y === today.getFullYear() ? ' is-current' : '');
+        band.style.left  = left + '%';
+        band.style.width = width + '%';
+        const lbl = document.createElement('span');
+        lbl.className = 'tbc-year-label';
+        lbl.textContent = y;
+        band.appendChild(lbl);
+        inner.appendChild(band);
+
+        // Month ticks + clickable month hits
+        for (let m = 0; m < 12; m++) {
+            const mStart = new Date(y, m, 1);
+            if (mStart >= maxDate) break;
+            const mLeft = toPct(mStart);
+
+            // Tick line at month boundary
+            if (m > 0) {
+                const tick = document.createElement('div');
+                tick.className = 'tbc-tick';
+                tick.style.left = mLeft + '%';
+                inner.appendChild(tick);
+            }
+
+            // Clickable hit area per month
+            const mEnd = new Date(y, m + 1, 1);
+            const mWidth = toPct(mEnd) - mLeft;
+            const hit = document.createElement('div');
+            hit.className = 'tbc-month-hit';
+            hit.style.left  = mLeft + '%';
+            hit.style.width = mWidth + '%';
+            hit.title = `${MONTHS_FR[m]} ${y}`;
+            hit.addEventListener('click', () => {
+                viewStart = new Date(y, m, 1);
+                render();
+            });
+            inner.appendChild(hit);
+        }
+        y++;
+    }
+
+    // Today tick
+    const todayPct = toPct(today);
+    if (todayPct >= 0 && todayPct <= 100) {
+        const todayTick = document.createElement('div');
+        todayTick.className = 'tbc-today-tick';
+        todayTick.style.left = todayPct + '%';
+        inner.appendChild(todayTick);
+        const todayLbl = document.createElement('div');
+        todayLbl.className = 'tbc-today-label';
+        todayLbl.style.left = todayPct + '%';
+        todayLbl.textContent = 'Auj.';
+        inner.appendChild(todayLbl);
+    }
+
+    // Viewport window highlight
+    const vs = viewRangeStart();
+    const ve = viewRangeEnd();
+    const winLeft  = Math.max(0, Math.min(100, toPct(vs)));
+    const winRight = Math.max(0, Math.min(100, toPct(ve)));
+    const winWidth = Math.max(0.5, winRight - winLeft);
+
+    const win = document.createElement('div');
+    win.className = 'tbc-window';
+    win.style.left  = winLeft + '%';
+    win.style.width = winWidth + '%';
+    inner.appendChild(win);
+
+    const winBorder = document.createElement('div');
+    winBorder.className = 'tbc-window-border';
+    winBorder.style.left  = winLeft + '%';
+    winBorder.style.width = winWidth + '%';
+    inner.appendChild(winBorder);
+}
+
+// ─── KEYBOARD NAVIGATION (← → T) ───────────────────────
+document.addEventListener('keydown', e => {
+    // Skip if focus is on an input/textarea
+    const tag = document.activeElement?.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+    if (document.getElementById('modalOverlay')?.classList.contains('open')) return;
+
+    if (e.key === 'ArrowLeft' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        document.getElementById('btnPrev').click();
+    }
+    if (e.key === 'ArrowRight' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        document.getElementById('btnNext').click();
+    }
+    if (e.key === 't' || e.key === 'T') {
+        if (tag !== 'BODY' && document.activeElement !== document.body) return;
+        document.getElementById('btnToday').click();
+    }
+});
 
 // ─── ROWS ────────────────────────────────────────────────────────────────────
 document.getElementById('btnAddRow').addEventListener('click', () => {
@@ -4768,6 +5908,96 @@ function openModal(rowId, sd, ed, taskId = null) {
     setObjToggle(hasExistingObj);
     // Load dependencies for this task
     if (typeof loadDepsForModal === 'function') loadDepsForModal(taskId, rowId);
+
+    // ── Advanced accordion: auto-open if editing task that has advanced fields filled ──
+    const hasAdvanced = !!(task?.tjm || task?.etp || task?.notes || (task?.objectives?.length > 0) || (task?.deps?.length > 0) || task?.createdBy);
+    setAdvancedOpen(hasAdvanced);
+
+    // ── Live preview ──
+    updateModalPreview();
+
+    // ── Footer meta ──
+    const footerMeta = document.getElementById('mFooterMeta');
+    if (task) {
+        const d = workingDays(toYMD(sd), toYMD(ed));
+        const cost = (parseFloat(task.tjm) || 0) * (parseFloat(task.etp) || 0) * d;
+        footerMeta.textContent = cost > 0 ? `${d} jours · ${fmtCost(cost)}` : `${d} jour${d > 1 ? 's' : ''} ouvrés`;
+    } else {
+        footerMeta.textContent = '';
+    }
+}
+
+// ─── ADVANCED ACCORDION ──────────────────────────────────
+function setAdvancedOpen(open) {
+    const body   = document.getElementById('mAdvancedBody');
+    const toggle = document.getElementById('mAdvancedToggle');
+    if (!body || !toggle) return;
+    body.classList.toggle('open', open);
+    toggle.classList.toggle('open', open);
+}
+
+document.getElementById('mAdvancedToggle').addEventListener('click', () => {
+    const isOpen = document.getElementById('mAdvancedBody').classList.contains('open');
+    setAdvancedOpen(!isOpen);
+});
+
+// Badge: count filled advanced fields
+function updateAdvBadge() {
+    const fields = [
+        document.getElementById('mTjm')?.value,
+        document.getElementById('mEtp')?.value,
+        document.getElementById('mNotes')?.value,
+    ];
+    const count = fields.filter(v => v && v.trim() !== '').length;
+    const badge = document.getElementById('mAdvBadge');
+    if (!badge) return;
+    if (count > 0) { badge.textContent = count; badge.style.display = ''; }
+    else { badge.style.display = 'none'; }
+}
+['mTjm', 'mEtp', 'mNotes'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', updateAdvBadge);
+});
+
+// ─── LIVE MODAL PREVIEW ───────────────────────────────────
+function updateModalPreview() {
+    const name     = document.getElementById('mTaskName')?.value?.trim() || 'Nouvelle tâche';
+    const start    = document.getElementById('mStartDate')?.value;
+    const end      = document.getElementById('mEndDate')?.value;
+    const progress = parseInt(document.getElementById('mProgress')?.value || '0');
+
+    const previewBar  = document.getElementById('mPreviewBar');
+    const previewName = document.getElementById('mPreviewName');
+    const previewDates= document.getElementById('mPreviewDates');
+    const previewProg = document.getElementById('mPreviewProgress');
+    if (!previewBar) return;
+
+    previewBar.style.background = selectedColor || TASK_COLORS[0];
+    previewName.textContent = name;
+
+    if (start && end) {
+        const ds = new Date(start).toLocaleDateString('fr-FR', { day:'2-digit', month:'short' });
+        const de = new Date(end).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' });
+        previewDates.textContent = `${ds} – ${de}`;
+    } else {
+        previewDates.textContent = '';
+    }
+    previewProg.style.width = Math.min(100, progress) + '%';
+}
+
+// Hook live preview to relevant inputs
+['mTaskName', 'mStartDate', 'mEndDate'].forEach(id => {
+    document.getElementById(id)?.addEventListener('input', updateModalPreview);
+    document.getElementById(id)?.addEventListener('change', updateModalPreview);
+});
+document.getElementById('mProgress')?.addEventListener('input', updateModalPreview);
+
+// Hook preview to color picker changes (triggered by buildColorPicker)
+const _origBuildColorPicker = window.buildColorPicker;
+if (typeof buildColorPicker === 'function') {
+    // Patch: after color click, update preview
+    document.getElementById('colorPicker')?.addEventListener('click', () => {
+        setTimeout(updateModalPreview, 10);
+    });
 }
 
 function closeModal() { document.getElementById('modalOverlay').classList.remove('open'); }
@@ -4780,7 +6010,27 @@ document.getElementById('mProgress').addEventListener('input', e => {
 });
 
 document.getElementById('mCancel').addEventListener('click', closeModal);
+document.getElementById('mCloseBtn').addEventListener('click', closeModal);
 document.getElementById('modalOverlay').addEventListener('click', e => { if (e.target === document.getElementById('modalOverlay')) closeModal(); });
+
+// Update footer meta live when dates change
+function updateModalFooterMeta() {
+    const start = document.getElementById('mStartDate')?.value;
+    const end   = document.getElementById('mEndDate')?.value;
+    if (!start || !end) return;
+    const d    = workingDays(start, end);
+    const tjm  = parseFloat(document.getElementById('mTjm')?.value || '0');
+    const etp  = parseFloat(document.getElementById('mEtp')?.value || '0');
+    const cost = tjm * etp * d;
+    const footerMeta = document.getElementById('mFooterMeta');
+    if (footerMeta) {
+        footerMeta.textContent = cost > 0 ? `${d} jours · ${fmtCost(cost)}` : `${d} jour${d > 1 ? 's' : ''} ouvrés`;
+    }
+}
+['mStartDate','mEndDate','mTjm','mEtp'].forEach(id => {
+    document.getElementById(id)?.addEventListener('change', updateModalFooterMeta);
+    document.getElementById(id)?.addEventListener('input', updateModalFooterMeta);
+});
 
 document.getElementById('mCreate').addEventListener('click', () => {
     const name = document.getElementById('mTaskName').value.trim() || 'Tâche';
@@ -5086,6 +6336,9 @@ function switchTab(tab) {
     document.getElementById('viewGantt').classList.toggle('active', tab === 'gantt');
     document.getElementById('viewDashboard').classList.toggle('active', tab === 'dashboard');
     document.getElementById('ganttControls').style.display = tab === 'gantt' ? 'flex' : 'none';
+    document.getElementById('filterBar').classList.toggle('hidden', tab !== 'gantt' || !filterVisible);
+    if (tab === 'gantt') updateTimeBreadcrumb();
+    else document.getElementById('timeBreadcrumb').classList.add('hidden');
     if (tab === 'dashboard') renderDashboard();
 }
 
@@ -5508,12 +6761,172 @@ function renderDashboard() {
         body.appendChild(statusSection);
     }
 
+    // ── Répartition Gestion courante / Développement ──
+    const groupSplit = {};
+    groups.forEach(g => {
+        groupSplit[g.id] = { id: g.id, name: g.name, taskCount: 0, cost: 0, etpDays: 0, days: 0, done: 0, inProgress: 0, todo: 0 };
+    });
+    rows.forEach(row => {
+        const gid = row.groupId;
+        if (!gid || !groupSplit[gid]) return;
+        row.tasks.forEach(t => {
+            const { days, cost, etp } = taskCost(t);
+            groupSplit[gid].taskCount++;
+            groupSplit[gid].cost += cost;
+            groupSplit[gid].etpDays += days * etp;
+            groupSplit[gid].days += days;
+            if (t.status === 'done' || t.progress === 100) groupSplit[gid].done++;
+            else if (t.status === 'in_progress') groupSplit[gid].inProgress++;
+            else groupSplit[gid].todo++;
+        });
+    });
+    const groupEntries = Object.values(groupSplit).filter(g => g.taskCount > 0);
+    if (groupEntries.length > 0) {
+        const GROUP_PALETTES = [
+            { bg: '#0d1f2d', accent: '#38bdf8', dim: '#1a2e3d', icon: '🗂' },  // Gestion courante
+            { bg: '#0d2318', accent: '#34d399', dim: '#1a3d2e', icon: '🚀' },  // Développement
+            { bg: '#1a1030', accent: '#c084fc', dim: '#3b1f5e', icon: '⚙️' },
+            { bg: '#1e1608', accent: '#fbbf24', dim: '#2d2010', icon: '📌' },
+        ];
+        const totalCostSplit = groupEntries.reduce((s, g) => s + g.cost, 0);
+        const totalTasksSplit = groupEntries.reduce((s, g) => s + g.taskCount, 0);
+
+        const splitSection = document.createElement('div');
+        splitSection.innerHTML = `<div class="db-section-title" style="margin-bottom:16px">Activité par groupe</div>`;
+
+        groupEntries.forEach((g, idx) => {
+            const col = GROUP_PALETTES[idx % GROUP_PALETTES.length];
+            const avgEtp = g.days > 0 ? g.etpDays / g.days : 0;
+            const donePct = g.taskCount > 0 ? Math.round((g.done / g.taskCount) * 100) : 0;
+            const inProgressPct = g.taskCount > 0 ? Math.round((g.inProgress / g.taskCount) * 100) : 0;
+            const todoPct = g.taskCount > 0 ? Math.round((g.todo / g.taskCount) * 100) : 0;
+            const costSharePct = totalCostSplit > 0 ? (g.cost / totalCostSplit) * 100 : 0;
+            const taskSharePct = totalTasksSplit > 0 ? (g.taskCount / totalTasksSplit) * 100 : 0;
+
+            // Collect metiers for this group
+            const metierMap = {};
+            rows.filter(r => r.groupId === g.id).forEach(row => {
+                row.tasks.forEach(t => {
+                    const m = (t.metier || '').trim();
+                    if (!m) return;
+                    metierMap[m] = (metierMap[m] || 0) + 1;
+                });
+            });
+            const topMetiers = Object.entries(metierMap).sort((a,b) => b[1]-a[1]).slice(0, 5);
+
+            // Collect bâtiments for this group
+            const batMap = {};
+            rows.filter(r => r.groupId === g.id).forEach(row => {
+                row.tasks.forEach(t => {
+                    (Array.isArray(t.batiments) ? t.batiments : []).filter(Boolean).forEach(b => {
+                        batMap[b] = (batMap[b] || 0) + 1;
+                    });
+                });
+            });
+            const topBats = Object.entries(batMap).sort((a,b) => b[1]-a[1]).slice(0, 5);
+
+            const card = document.createElement('div');
+            card.style.cssText = `background:${col.bg};border:1px solid ${col.accent}28;border-radius:12px;padding:22px 24px;margin-bottom:14px;position:relative;overflow:hidden;`;
+
+            // Decorative glow
+            const glow = `<div style="position:absolute;top:-40px;right:-40px;width:180px;height:180px;background:radial-gradient(circle,${col.accent}12 0%,transparent 70%);pointer-events:none;"></div>`;
+
+            // Segment progress bar (todo / in_progress / done)
+            const segBar = `
+                <div style="height:6px;border-radius:3px;overflow:hidden;display:flex;gap:1px;margin-bottom:16px;">
+                    <div style="width:${donePct}%;background:#22c55e;border-radius:3px 0 0 3px;transition:width .5s;min-width:${donePct>0?'3px':'0'}" title="Terminé ${donePct}%"></div>
+                    <div style="width:${inProgressPct}%;background:#6366f1;transition:width .5s;min-width:${inProgressPct>0?'3px':'0'}" title="En cours ${inProgressPct}%"></div>
+                    <div style="width:${todoPct}%;background:${col.accent}44;border-radius:0 3px 3px 0;transition:width .5s;min-width:${todoPct>0?'3px':'0'}" title="À faire ${todoPct}%"></div>
+                </div>`;
+
+            // Metier chips
+            const metierChips = topMetiers.length > 0
+                ? topMetiers.map(([name, cnt]) => `<span style="display:inline-flex;align-items:center;gap:4px;background:${col.accent}14;border:1px solid ${col.accent}30;color:${col.accent}cc;font-size:10px;padding:2px 9px;border-radius:10px;white-space:nowrap;">${name}<span style="font-family:'Geist Mono',monospace;font-size:9px;opacity:0.7">${cnt}</span></span>`).join('')
+                : `<span style="font-size:11px;color:${col.accent}44;font-style:italic">Aucun métier renseigné</span>`;
+
+            // Bâtiment chips
+            const batChips = topBats.length > 0
+                ? topBats.map(([name, cnt]) => `<span style="display:inline-flex;align-items:center;gap:4px;background:${col.accent}0e;border:1px solid ${col.accent}22;color:${col.accent}99;font-size:10px;padding:2px 9px;border-radius:10px;white-space:nowrap;">🏢 ${name}<span style="font-family:'Geist Mono',monospace;font-size:9px;opacity:0.7">${cnt}</span></span>`).join('')
+                : `<span style="font-size:11px;color:${col.accent}44;font-style:italic">Aucun bâtiment renseigné</span>`;
+
+            card.innerHTML = glow + `
+                <!-- Header -->
+                <div style="display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:20px;">
+                    <div>
+                        <div style="display:flex;align-items:center;gap:9px;margin-bottom:5px;">
+                            <span style="font-size:18px">${col.icon}</span>
+                            <span style="font-size:16px;font-weight:700;color:${col.accent};letter-spacing:-0.01em">${g.name}</span>
+                        </div>
+                        <div style="font-size:11px;color:${col.accent}66">${g.taskCount} tâche${g.taskCount>1?'s':''} · ${taskSharePct.toFixed(0)}% de l'activité totale</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-family:'Geist Mono',monospace;font-size:26px;font-weight:400;color:${col.accent};line-height:1">${fmtCost(g.cost)}</div>
+                        <div style="font-size:10px;color:${col.accent}55;margin-top:2px">${costSharePct.toFixed(1)}% du budget total</div>
+                    </div>
+                </div>
+
+                <!-- KPI row -->
+                <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px;">
+                    <div style="background:${col.accent}0d;border:1px solid ${col.accent}20;border-radius:8px;padding:11px 12px;">
+                        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:${col.accent}66;margin-bottom:5px">ETP moyen</div>
+                        <div style="font-family:'Geist Mono',monospace;font-size:20px;color:${col.accent}">${fmtEtp(avgEtp)}</div>
+                    </div>
+                    <div style="background:#22c55e0d;border:1px solid #22c55e22;border-radius:8px;padding:11px 12px;">
+                        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:#22c55e88;margin-bottom:5px">Terminées</div>
+                        <div style="font-family:'Geist Mono',monospace;font-size:20px;color:#22c55e">${g.done}<span style="font-size:12px;opacity:0.5"> / ${g.taskCount}</span></div>
+                    </div>
+                    <div style="background:#6366f10d;border:1px solid #6366f122;border-radius:8px;padding:11px 12px;">
+                        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:#6366f188;margin-bottom:5px">En cours</div>
+                        <div style="font-family:'Geist Mono',monospace;font-size:20px;color:#6366f1">${g.inProgress}<span style="font-size:12px;opacity:0.5"> / ${g.taskCount}</span></div>
+                    </div>
+                    <div style="background:#71717a0d;border:1px solid #71717a22;border-radius:8px;padding:11px 12px;">
+                        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:#71717a88;margin-bottom:5px">À faire</div>
+                        <div style="font-family:'Geist Mono',monospace;font-size:20px;color:#71717a">${g.todo}<span style="font-size:12px;opacity:0.5"> / ${g.taskCount}</span></div>
+                    </div>
+                </div>
+
+                <!-- Completion bar -->
+                <div style="display:flex;align-items:center;gap:10px;margin-bottom:4px;">
+                    <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:${col.accent}55;white-space:nowrap">Avancement global</div>
+                    <div style="flex:1;height:1px;background:${col.accent}18;"></div>
+                    <div style="font-family:'Geist Mono',monospace;font-size:11px;color:${col.accent};font-weight:600">${donePct}%</div>
+                </div>
+                ${segBar}
+                <div style="display:flex;gap:14px;margin-bottom:18px;">
+                    <div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:50%;background:#22c55e"></div><span style="font-size:10px;color:#71717a">Terminé ${donePct}%</span></div>
+                    <div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:50%;background:#6366f1"></div><span style="font-size:10px;color:#71717a">En cours ${inProgressPct}%</span></div>
+                    <div style="display:flex;align-items:center;gap:5px"><div style="width:8px;height:8px;border-radius:50%;background:${col.accent}44"></div><span style="font-size:10px;color:#71717a">À faire ${todoPct}%</span></div>
+                </div>
+
+                <!-- Metiers & Bâtiments -->
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+                    <div>
+                        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:${col.accent}55;margin-bottom:7px;font-weight:600">🔧 Métiers</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:5px;">${metierChips}</div>
+                    </div>
+                    <div>
+                        <div style="font-size:9px;text-transform:uppercase;letter-spacing:0.08em;color:${col.accent}55;margin-bottom:7px;font-weight:600">🏢 Bâtiments</div>
+                        <div style="display:flex;flex-wrap:wrap;gap:5px;">${batChips}</div>
+                    </div>
+                </div>`;
+
+            splitSection.appendChild(card);
+        });
+
+        body.appendChild(splitSection);
+    }
+
     // ── Reporting Mensuel / Trimestriel / Annuel ──
     const reportSection = document.createElement('div');
 
     const reportHdr = document.createElement('div');
     reportHdr.style.cssText = 'display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;';
-    reportHdr.innerHTML = `<div class="db-section-title" style="margin-bottom:0">Reporting activité</div>`;
+    reportHdr.innerHTML = `
+        <div class="db-section-title" style="margin-bottom:0">📊 Reporting activité</div>
+        <div class="db-report-export-btns">
+            <button class="db-report-export-btn csv" id="dbExportCSVBtn" title="Exporter le rapport en CSV (Excel)">📥 Export CSV</button>
+            <button class="db-report-export-btn pdf" id="dbExportPDFBtn" title="Imprimer / Exporter en PDF">🖨 Imprimer PDF</button>
+        </div>`;
     reportSection.appendChild(reportHdr);
 
     const reportWrap = document.createElement('div');
@@ -5761,6 +7174,10 @@ function renderDashboard() {
     reportSection.appendChild(reportWrap);
     body.appendChild(reportSection);
 
+    // Wire up export buttons
+    document.getElementById('dbExportCSVBtn').addEventListener('click', exportReportCSV);
+    document.getElementById('dbExportPDFBtn').addEventListener('click', printReportPDF);
+
     // ── Export / Import ──
     const ioSection = document.createElement('div');
     ioSection.innerHTML = `<div class="db-section-title">Données</div>`;
@@ -5788,6 +7205,276 @@ function renderDashboard() {
 
 // ─── INIT ─────────────────────────────────────────────────────────────────────
 viewStart = startOfMonth(today);
+
+// ─── EXPORT CSV RAPPORT ───────────────────────────────────
+function exportReportCSV() {
+    const yr = new Date().getFullYear();
+    const allTasks = rows.flatMap(r => r.tasks);
+
+    // Group name helper
+    function getGroupName(row) {
+        if (!row.groupId) return '';
+        const g = groups.find(g => g.id === row.groupId);
+        return g ? g.name : '';
+    }
+
+    // Build per-task CSV
+    const headers = ['Ligne', 'Groupe', 'Tâche', 'Métier', 'Bâtiments', 'Début', 'Fin', 'ETP', 'TJM', 'Coût', 'Avancement', 'Statut', 'Notes'];
+    const csvRows = [headers.join(';')];
+
+    rows.forEach(row => {
+        const groupName = getGroupName(row);
+        row.tasks.forEach(t => {
+            const { days, cost } = taskCost(t);
+            const statusLabel = TASK_STATUSES.find(s => s.id === t.status)?.label || '';
+            const vals = [
+                `"${(row.name || '').replace(/"/g, '""')}"`,
+                `"${groupName.replace(/"/g, '""')}"`,
+                `"${(t.name || '').replace(/"/g, '""')}"`,
+                `"${(t.metier || '').replace(/"/g, '""')}"`,
+                `"${(Array.isArray(t.batiments) ? t.batiments.join(', ') : '').replace(/"/g, '""')}"`,
+                t.start || '',
+                t.end || '',
+                (t.etp || 0).toString().replace('.', ','),
+                (t.tjm || 0).toString().replace('.', ','),
+                cost.toFixed(2).replace('.', ','),
+                (t.progress || 0) + '%',
+                statusLabel,
+                `"${(t.notes || '').replace(/"/g, '""')}"`
+            ];
+            csvRows.push(vals.join(';'));
+        });
+    });
+
+    // Add separator row + monthly summary
+    csvRows.push('');
+    csvRows.push('"── SYNTHÈSE MENSUELLE ──"');
+    const monthlyHeaders = ['Mois', 'Nb Tâches', 'Jours travaillés', 'ETP moyen', 'Coût total', 'Gestion courante (nb)', 'Développement (nb)'];
+    csvRows.push(monthlyHeaders.join(';'));
+
+    for (let m = 0; m < 12; m++) {
+        const ms = new Date(yr, m, 1).getTime();
+        const me = new Date(yr, m + 1, 0, 23, 59, 59).getTime();
+        let nTasks = 0, etpDaysM = 0, wdM = 0, costM = 0;
+        const groupCounts = {};
+        groups.forEach(g => { groupCounts[g.id] = 0; });
+
+        rows.forEach(row => {
+            const groupName = row.groupId;
+            row.tasks.forEach(t => {
+                const ts = new Date(t.start).getTime();
+                const te = new Date(t.end).getTime();
+                if (ts > me || te < ms) return;
+                nTasks++;
+                const { days, cost, etp } = taskCost(t);
+                etpDaysM += days * etp;
+                wdM += days;
+                costM += cost;
+                if (groupName && groupCounts[groupName] !== undefined) groupCounts[groupName]++;
+            });
+        });
+
+        const avgEtp = wdM > 0 ? (etpDaysM / wdM) : 0;
+        const monthLabel = new Date(yr, m, 1).toLocaleDateString('fr-FR', { month: 'long', year: 'numeric' });
+        const groupVals = groups.map(g => groupCounts[g.id] || 0).join(';');
+        csvRows.push(`"${monthLabel}";${nTasks};${wdM};${avgEtp.toFixed(2).replace('.', ',')};${costM.toFixed(2).replace('.', ',')};${groupVals}`);
+    }
+
+    // Add metier summary
+    csvRows.push('');
+    csvRows.push('"── SYNTHÈSE PAR MÉTIER ──"');
+    csvRows.push('"Métier";"Nb Tâches";"ETP moyen";"Coût total"');
+    const metierMap = {};
+    rows.forEach(row => row.tasks.forEach(t => {
+        const m = (t.metier || '').trim();
+        if (!m) return;
+        if (!metierMap[m]) metierMap[m] = { count: 0, etpDays: 0, days: 0, cost: 0 };
+        const { days, cost, etp } = taskCost(t);
+        metierMap[m].count++;
+        metierMap[m].etpDays += days * etp;
+        metierMap[m].days += days;
+        metierMap[m].cost += cost;
+    }));
+    Object.entries(metierMap).sort((a,b) => b[1].cost - a[1].cost).forEach(([name, v]) => {
+        const avg = v.days > 0 ? v.etpDays / v.days : 0;
+        csvRows.push(`"${name.replace(/"/g,'""')}";${v.count};${avg.toFixed(2).replace('.',',')};${v.cost.toFixed(2).replace('.',',')}`);
+    });
+
+    // Add batiment summary
+    csvRows.push('');
+    csvRows.push('"── SYNTHÈSE PAR BÂTIMENT ──"');
+    csvRows.push('"Bâtiment";"Nb Tâches";"ETP moyen";"Coût total"');
+    const batMap = {};
+    rows.forEach(row => row.tasks.forEach(t => {
+        (Array.isArray(t.batiments) ? t.batiments : []).filter(Boolean).forEach(b => {
+            if (!batMap[b]) batMap[b] = { count: 0, etpDays: 0, days: 0, cost: 0 };
+            const { days, cost, etp } = taskCost(t);
+            batMap[b].count++;
+            batMap[b].etpDays += days * etp;
+            batMap[b].days += days;
+            batMap[b].cost += cost;
+        });
+    }));
+    Object.entries(batMap).sort((a,b) => b[1].cost - a[1].cost).forEach(([name, v]) => {
+        const avg = v.days > 0 ? v.etpDays / v.days : 0;
+        csvRows.push(`"${name.replace(/"/g,'""')}";${v.count};${avg.toFixed(2).replace('.',',')};${v.cost.toFixed(2).replace('.',',')}`);
+    });
+
+    // BOM + download
+    const BOM = '\uFEFF';
+    const blob = new Blob([BOM + csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const d = new Date();
+    link.download = `rapport_planning_${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}.csv`;
+    link.href = URL.createObjectURL(blob);
+    link.click();
+    URL.revokeObjectURL(link.href);
+    showToast('📥 Rapport CSV exporté');
+}
+
+// ─── IMPRESSION / EXPORT PDF ──────────────────────────────
+function printReportPDF() {
+    const allTasks = rows.flatMap(r => r.tasks);
+    const totalTasks = allTasks.length;
+    const today = new Date();
+
+    // --- Build group split data ---
+    const groupData = {};
+    groups.forEach(g => { groupData[g.id] = { name: g.name, taskCount: 0, cost: 0, etpDays: 0, days: 0, done: 0 }; });
+    rows.forEach(row => {
+        if (!row.groupId || !groupData[row.groupId]) return;
+        row.tasks.forEach(t => {
+            const { days, cost, etp } = taskCost(t);
+            groupData[row.groupId].taskCount++;
+            groupData[row.groupId].cost += cost;
+            groupData[row.groupId].etpDays += days * etp;
+            groupData[row.groupId].days += days;
+            if (t.status === 'done' || t.progress === 100) groupData[row.groupId].done++;
+        });
+    });
+
+    // --- Build metier data ---
+    const metierData = {};
+    rows.forEach(row => row.tasks.forEach(t => {
+        const m = (t.metier || '').trim();
+        if (!m) return;
+        if (!metierData[m]) metierData[m] = { count: 0, etpDays: 0, days: 0, cost: 0 };
+        const { days, cost, etp } = taskCost(t);
+        metierData[m].count++;
+        metierData[m].etpDays += days * etp;
+        metierData[m].days += days;
+        metierData[m].cost += cost;
+    }));
+
+    // --- Build batiment data ---
+    const batData = {};
+    rows.forEach(row => row.tasks.forEach(t => {
+        (Array.isArray(t.batiments) ? t.batiments : []).filter(Boolean).forEach(b => {
+            if (!batData[b]) batData[b] = { count: 0, etpDays: 0, days: 0, cost: 0 };
+            const { days, cost, etp } = taskCost(t);
+            batData[b].count++;
+            batData[b].etpDays += days * etp;
+            batData[b].days += days;
+            batData[b].cost += cost;
+        });
+    }));
+
+    // --- Status counts ---
+    const statusCounts = {};
+    TASK_STATUSES.forEach(s => { statusCounts[s.id] = 0; });
+    allTasks.forEach(t => { if (t.status) statusCounts[t.status] = (statusCounts[t.status] || 0) + 1; });
+
+    const totalCostAll = rows.reduce((s, row) => s + row.tasks.reduce((ss, t) => ss + taskCost(t).cost, 0), 0);
+
+    const groupRows = Object.values(groupData).filter(g => g.taskCount > 0)
+        .map(g => `<tr>
+            <td>${g.name}</td>
+            <td style="text-align:center">${g.taskCount}</td>
+            <td style="text-align:right">${fmtEtp(g.days > 0 ? g.etpDays / g.days : 0)}</td>
+            <td style="text-align:right">${fmtCost(g.cost)}</td>
+            <td style="text-align:center">${g.taskCount > 0 ? Math.round(g.done/g.taskCount*100) : 0}%</td>
+        </tr>`).join('');
+
+    const metierRows = Object.entries(metierData).sort((a,b) => b[1].cost - a[1].cost)
+        .map(([name, v]) => `<tr>
+            <td>${name}</td>
+            <td style="text-align:center">${v.count}</td>
+            <td style="text-align:right">${fmtEtp(v.days > 0 ? v.etpDays/v.days : 0)}</td>
+            <td style="text-align:right">${fmtCost(v.cost)}</td>
+        </tr>`).join('');
+
+    const batRows = Object.entries(batData).sort((a,b) => b[1].cost - a[1].cost)
+        .map(([name, v]) => `<tr>
+            <td>🏢 ${name}</td>
+            <td style="text-align:center">${v.count}</td>
+            <td style="text-align:right">${fmtEtp(v.days > 0 ? v.etpDays/v.days : 0)}</td>
+            <td style="text-align:right">${fmtCost(v.cost)}</td>
+        </tr>`).join('');
+
+    const statusRows = TASK_STATUSES.map(s => {
+        const n = statusCounts[s.id] || 0;
+        const pct = totalTasks > 0 ? Math.round(n / totalTasks * 100) : 0;
+        return `<tr><td>${s.icon} ${s.label}</td><td style="text-align:center">${n}</td><td style="text-align:right">${pct}%</td></tr>`;
+    }).join('');
+
+    const printHtml = `<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8">
+<title>Rapport Planning — ${today.toLocaleDateString('fr-FR')}</title>
+<style>
+  body { font-family: system-ui, sans-serif; font-size: 12px; color: #1a1a1a; margin: 0; padding: 28px 36px; }
+  h1 { font-size: 20px; font-weight: 700; color: #1a1a1a; margin: 0 0 4px; }
+  .subtitle { font-size: 12px; color: #666; margin-bottom: 28px; }
+  h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.06em; color: #444; margin: 24px 0 10px; border-bottom: 2px solid #e5e7eb; padding-bottom: 6px; }
+  .kpi-row { display: flex; gap: 12px; margin-bottom: 20px; }
+  .kpi { flex: 1; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 14px; }
+  .kpi-label { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-bottom: 4px; }
+  .kpi-value { font-size: 22px; font-weight: 600; color: #111; font-family: monospace; }
+  table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+  th { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #666; padding: 7px 10px; border-bottom: 1px solid #e5e7eb; text-align: left; background: #f9fafb; }
+  td { padding: 8px 10px; border-bottom: 1px solid #f3f4f6; color: #333; }
+  tr:last-child td { border-bottom: none; }
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 10px; font-weight: 600; }
+  .footer { margin-top: 32px; padding-top: 12px; border-top: 1px solid #e5e7eb; font-size: 10px; color: #999; text-align: center; }
+  @media print { @page { margin: 16mm; } }
+</style></head><body>
+<h1>Rapport Planning</h1>
+<div class="subtitle">Généré le ${today.toLocaleDateString('fr-FR', { weekday:'long', year:'numeric', month:'long', day:'numeric' })} · ${totalTasks} tâche${totalTasks>1?'s':''} · ${rows.length} ligne${rows.length>1?'s':''}</div>
+
+<div class="kpi-row">
+  <div class="kpi"><div class="kpi-label">Coût total</div><div class="kpi-value">${fmtCost(totalCostAll)}</div></div>
+  <div class="kpi"><div class="kpi-label">Tâches totales</div><div class="kpi-value">${totalTasks}</div></div>
+  <div class="kpi"><div class="kpi-label">Lignes</div><div class="kpi-value">${rows.length}</div></div>
+  <div class="kpi"><div class="kpi-label">Groupes actifs</div><div class="kpi-value">${Object.values(groupData).filter(g=>g.taskCount>0).length}</div></div>
+</div>
+
+<h2>⚡ Gestion courante vs Développement</h2>
+<table><thead><tr><th>Groupe</th><th>Nb tâches</th><th style="text-align:right">ETP moyen</th><th style="text-align:right">Coût</th><th style="text-align:center">Taux completion</th></tr></thead>
+<tbody>${groupRows || '<tr><td colspan="5" style="color:#999;text-align:center">Aucune donnée</td></tr>'}</tbody></table>
+
+<h2>🔧 Par métier</h2>
+<table><thead><tr><th>Métier</th><th>Nb tâches</th><th style="text-align:right">ETP moyen</th><th style="text-align:right">Coût</th></tr></thead>
+<tbody>${metierRows || '<tr><td colspan="4" style="color:#999;text-align:center">Aucun métier renseigné</td></tr>'}</tbody></table>
+
+<h2>🏢 Par bâtiment</h2>
+<table><thead><tr><th>Bâtiment</th><th>Nb tâches</th><th style="text-align:right">ETP moyen</th><th style="text-align:right">Coût</th></tr></thead>
+<tbody>${batRows || '<tr><td colspan="4" style="color:#999;text-align:center">Aucun bâtiment renseigné</td></tr>'}</tbody></table>
+
+<h2>📋 Répartition par statut</h2>
+<table><thead><tr><th>Statut</th><th>Nb tâches</th><th style="text-align:right">Part</th></tr></thead>
+<tbody>${statusRows}</tbody></table>
+
+<div class="footer">Planning Gantt · Export automatique</div>
+<script>window.onload=()=>{window.print();}<\/script>
+</body></html>`;
+
+    const win = window.open('', '_blank', 'width=900,height=700');
+    if (win) {
+        win.document.write(printHtml);
+        win.document.close();
+    } else {
+        showToast('❌ Popup bloqué — autorisez les popups pour imprimer', true);
+    }
+}
 
 // ══════════════════════════════════════════════════════════
 //  AMÉLIORATIONS v2
@@ -6167,6 +7854,7 @@ function applyRemoteData(data, isInitialLoad = false) {
     rows            = normalizeRows(data.rows);
     groups          = data.groups          || [];
     milestones      = data.milestones      || [];
+    backlog         = Array.isArray(data.backlog) ? data.backlog : [];
     taskIdCounter   = Math.max(taskIdCounter,   data.taskIdCounter   || 0);
     groupIdCounter  = Math.max(groupIdCounter,  data.groupIdCounter  || 3);
     msIdCounter     = Math.max(msIdCounter,     data.msIdCounter     || 0);
@@ -6305,6 +7993,7 @@ async function saveToStorage() {
             rows,
             groups,
             milestones,
+            backlog,
             taskIdCounter,
             groupIdCounter,
             msIdCounter
@@ -7151,6 +8840,472 @@ document.addEventListener('keydown', e => {
         manualSave();
     }
 });
+// ─── BACKLOG (FILE D'ATTENTE) ─────────────────────────────────────────────────
+
+// ── Rendu ──
+function renderBacklog() {
+    const chips   = document.getElementById('backlogChips');
+    const empty   = document.getElementById('backlogEmpty');
+    const counter = document.getElementById('backlogCount');
+    if (!chips) return;
+
+    // Update counter badge
+    counter.textContent = backlog.length;
+    counter.className   = 'backlog-count' + (backlog.length > 0 ? ' has-items' : '');
+
+    // Remove existing chips (keep empty placeholder)
+    chips.querySelectorAll('.backlog-chip').forEach(c => c.remove());
+    empty.style.display = backlog.length === 0 ? '' : 'none';
+
+    backlog.forEach(item => {
+        const chip = document.createElement('div');
+        chip.className       = 'backlog-chip';
+        chip.dataset.backlogId = item.id;
+        chip.draggable       = true;
+        chip.title           = 'Glisser sur une ligne pour planifier, ou cliquer sur ✏';
+
+        const dot = document.createElement('span');
+        dot.className      = 'backlog-chip-dot';
+        dot.style.background = item.color;
+
+        const name = document.createElement('span');
+        name.className   = 'backlog-chip-name';
+        name.textContent = item.name;
+
+        // Plan button (opens modal)
+        const planBtn = document.createElement('button');
+        planBtn.className   = 'backlog-chip-plan';
+        planBtn.title       = 'Planifier cette tâche';
+        planBtn.textContent = '✏';
+        planBtn.addEventListener('click', e => { e.stopPropagation(); openBacklogModal(item.id); });
+
+        // Delete button
+        const delBtn = document.createElement('button');
+        delBtn.className   = 'backlog-chip-del';
+        delBtn.title       = 'Supprimer de la file';
+        delBtn.textContent = '×';
+        delBtn.addEventListener('click', e => {
+            e.stopPropagation();
+            backlog = backlog.filter(b => b.id !== item.id);
+            renderBacklog();
+            saveToStorage();
+        });
+
+        chip.append(dot, name, planBtn, delBtn);
+
+        // ── Drag from backlog ──
+        chip.addEventListener('dragstart', e => {
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/backlog-id', item.id);
+            chip.classList.add('dragging-chip');
+            // Show ghost
+            const ghost = document.getElementById('backlogDragGhost');
+            if (ghost) {
+                ghost.querySelector('.bdg-dot').style.background = item.color;
+                ghost.querySelector('.bdg-name').textContent     = item.name;
+            }
+            // Highlight all gantt rows as drop targets
+            document.querySelectorAll('.gantt-row').forEach(r => r.classList.add('backlog-drop-target'));
+        });
+        chip.addEventListener('dragend', () => {
+            chip.classList.remove('dragging-chip');
+            document.querySelectorAll('.gantt-row').forEach(r => r.classList.remove('backlog-drop-target'));
+        });
+
+        chips.appendChild(chip);
+    });
+}
+
+// ── Ajouter au backlog ──
+function addToBacklog(name) {
+    if (!name.trim()) return;
+    const color = TASK_COLORS[backlog.length % TASK_COLORS.length];
+    backlog.push({ id: backlogIdCounter++, name: name.trim(), color, createdBy: _cachedClientId || null });
+    renderBacklog();
+    saveToStorage();
+}
+
+// ── Ouvrir le modal pour planifier une tâche du backlog ──
+function openBacklogModal(backlogId) {
+    const item = backlog.find(b => b.id === backlogId);
+    if (!item) return;
+
+    // Populate row selector
+    const sel = document.getElementById('mRowSelect');
+    sel.innerHTML = '<option value="">— Choisir une ligne —</option>';
+    rows.forEach(r => {
+        const opt = document.createElement('option');
+        opt.value       = r.id;
+        opt.textContent = r.name || '(sans nom)';
+        sel.appendChild(opt);
+    });
+    document.getElementById('mRowSelectField').style.display = '';
+
+    // Default dates: today → today + 7j
+    const sd = new Date(today);
+    const ed = new Date(today); ed.setDate(ed.getDate() + 7);
+
+    // Fake rowId = null for now (will be resolved on save)
+    modalState = { rowId: null, editTaskId: null, fromBacklogId: backlogId };
+    selectedColor = item.color;
+    modalObjectives = [];
+
+    document.getElementById('mTitle').textContent     = '📋 Planifier la tâche';
+    document.getElementById('mTaskName').value        = item.name;
+    document.getElementById('mStartDate').value       = toYMD(sd);
+    document.getElementById('mEndDate').value         = toYMD(ed);
+    document.getElementById('mTjm').value             = '';
+    document.getElementById('mEtp').value             = '';
+    document.getElementById('mProgress').value        = 0;
+    document.getElementById('mProgressVal').textContent = '0%';
+    document.getElementById('mProgressFill').style.width = '0%';
+    document.getElementById('mNotes').value           = '';
+    document.getElementById('mMetier').value          = '';
+    document.getElementById('mCreatorRow').style.display = 'none';
+
+    buildColorPicker();
+    buildStatusSelector(null);
+    buildObjList();
+    setObjToggle(false);
+    setAdvancedOpen(false);
+    updateModalPreview();
+
+    document.getElementById('modalOverlay').classList.add('open');
+    setTimeout(() => document.getElementById('mTaskName').select(), 50);
+}
+
+// ── Patch du bouton Enregistrer pour gérer le cas backlog ──
+// On wraps the existing mCreate listener with backlog logic
+const _origMCreate = document.getElementById('mCreate');
+_origMCreate.addEventListener('click', () => {
+    if (!modalState.fromBacklogId) return; // handled by original listener
+
+    const name  = document.getElementById('mTaskName').value.trim() || 'Tâche';
+    const start = document.getElementById('mStartDate').value;
+    const end   = document.getElementById('mEndDate').value;
+    const rowId = parseInt(document.getElementById('mRowSelect').value);
+
+    if (!start || !end || end <= start) return;
+    if (!rowId) {
+        document.getElementById('mRowSelect').style.borderColor = 'var(--danger)';
+        setTimeout(() => { document.getElementById('mRowSelect').style.borderColor = ''; }, 1500);
+        showToast('⚠ Veuillez choisir une ligne', true);
+        return;
+    }
+
+    const row = rows.find(r => r.id === rowId);
+    if (!row) return;
+
+    if (overlaps(row.tasks, start, end)) {
+        document.getElementById('mStartDate').style.borderColor = '#ef4444';
+        document.getElementById('mEndDate').style.borderColor   = '#ef4444';
+        showToast('⚠ Chevauchement avec une tâche existante', true);
+        setTimeout(() => {
+            document.getElementById('mStartDate').style.borderColor = '';
+            document.getElementById('mEndDate').style.borderColor   = '';
+        }, 1500);
+        return;
+    }
+
+    pushUndo();
+
+    const tjm      = parseFloat(document.getElementById('mTjm').value)      || 0;
+    const etp      = parseFloat(document.getElementById('mEtp').value)      || 0;
+    const progress = parseInt(document.getElementById('mProgress').value)   || 0;
+    const notes    = document.getElementById('mNotes').value.trim()         || null;
+    const metier   = document.getElementById('mMetier').value.trim()        || null;
+    const batiments= [...(document.getElementById('mBatimentInput')._modalBats || [])];
+
+    row.tasks.push({
+        id: taskIdCounter++, name, start, end, color: selectedColor,
+        tjm, etp, progress, status: selectedStatus || null,
+        notes, metier, batiments, objectives: [],
+        createdBy: _cachedClientId || null
+    });
+
+    // Remove from backlog
+    backlog = backlog.filter(b => b.id !== modalState.fromBacklogId);
+    modalState.fromBacklogId = null;
+    document.getElementById('mRowSelectField').style.display = 'none';
+
+    document.getElementById('mStartDate').style.borderColor = '';
+    document.getElementById('mEndDate').style.borderColor   = '';
+    render();
+    closeModal();
+    saveToStorage();
+    showToast('✅ Tâche planifiée depuis la file d\'attente');
+}, true); // capture = true so it runs before the original
+
+// Hide row selector when modal closes normally
+const _origCloseModal = closeModal;
+closeModal = function() {
+    _origCloseModal();
+    document.getElementById('mRowSelectField').style.display = 'none';
+    if (modalState) modalState.fromBacklogId = null;
+};
+
+// ── Drop d'un chip backlog sur une ligne Gantt ──
+document.addEventListener('dragover', e => {
+    const row = e.target.closest('.gantt-row');
+    if (!row || !e.dataTransfer.types.includes('text/backlog-id')) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+});
+
+document.addEventListener('drop', e => {
+    const backlogId = parseInt(e.dataTransfer.getData('text/backlog-id'));
+    if (isNaN(backlogId)) return;
+
+    const rowEl = e.target.closest('.gantt-row');
+    if (!rowEl) return;
+    e.preventDefault();
+
+    const rowId = parseInt(rowEl.dataset.rowId);
+    const row   = rows.find(r => r.id === rowId);
+    const item  = backlog.find(b => b.id === backlogId);
+    if (!row || !item) return;
+
+    // Calculate drop date from cursor position on the track
+    const track = rowEl.querySelector('.row-track');
+    if (!track) return;
+    const rect   = track.getBoundingClientRect();
+    const pct    = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const clickDate = pctToDate(pct);
+
+    // Duration by zoom (same logic as click-to-create)
+    let sd, ed;
+    if (zoom === 'currentweek' || zoom === 'week') { sd = snapDay(clickDate);   ed = addDays(sd, 1); }
+    else if (zoom === 'month')                     { sd = snapWeek(clickDate);  ed = addDays(sd, 7); }
+    else if (zoom === 'quarter')                   { sd = snapMonth(clickDate); ed = addMonths(sd, 1); }
+    else                                           { sd = startOfQuarter(clickDate); ed = addMonths(sd, 3); }
+
+    const dur  = ed.getTime() - sd.getTime();
+    const slot = findFreeSlot(row.tasks, sd, dur);
+    if (!slot) { showToast('⚠ Impossible de trouver un créneau libre', true); return; }
+
+    pushUndo();
+    row.tasks.push({
+        id: taskIdCounter++,
+        name: item.name,
+        start: toYMD(slot.start),
+        end:   toYMD(slot.end),
+        color: item.color,
+        etp: 0, tjm: 0, progress: 0,
+        status: null, notes: null, metier: null, batiments: [], objectives: [],
+        createdBy: _cachedClientId || null
+    });
+
+    backlog = backlog.filter(b => b.id !== backlogId);
+    render();
+    saveToStorage();
+    showToast('✅ "' + item.name + '" planifiée sur ' + (row.name || 'la ligne'));
+});
+
+// ── Ghost drag (visuel sous le curseur) ──
+(function() {
+    const ghost = document.createElement('div');
+    ghost.id        = 'backlogDragGhost';
+    ghost.className = 'backlog-drag-ghost';
+    ghost.style.display = 'none';
+    ghost.innerHTML = '<span class="bdg-dot" style="width:8px;height:8px;border-radius:50%;flex-shrink:0"></span><span class="bdg-name"></span>';
+    document.body.appendChild(ghost);
+})();
+
+// ── Toggle du panneau ──
+document.getElementById('backlogHeader').addEventListener('click', e => {
+    if (e.target.closest('#backlogAddBtn')) return;
+    document.getElementById('backlogPanel').classList.toggle('open');
+});
+
+// ── Bouton "+ Ajouter" ──
+document.getElementById('backlogAddBtn').addEventListener('click', e => {
+    e.stopPropagation();
+    const panel = document.getElementById('backlogPanel');
+    panel.classList.add('open');
+    const addRow = document.getElementById('backlogAddRow');
+    addRow.classList.add('visible');
+    setTimeout(() => document.getElementById('backlogInlineInput').focus(), 30);
+});
+
+// ── Confirmer l'ajout inline ──
+function confirmBacklogAdd() {
+    const inp = document.getElementById('backlogInlineInput');
+    const val = inp.value.trim();
+    if (val) addToBacklog(val);
+    inp.value = '';
+    document.getElementById('backlogAddRow').classList.remove('visible');
+}
+
+document.getElementById('backlogInlineConfirm').addEventListener('click', confirmBacklogAdd);
+document.getElementById('backlogInlineInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); confirmBacklogAdd(); }
+    if (e.key === 'Escape') {
+        document.getElementById('backlogInlineInput').value = '';
+        document.getElementById('backlogAddRow').classList.remove('visible');
+    }
+});
+
+// ─── QUICK ADD POPOVER ───────────────────────────────────────────────────────
+
+// Inject popover DOM once
+(function() {
+    const el = document.createElement('div');
+    el.id = 'quickAddPopover';
+    el.className = 'quick-add-popover';
+    el.innerHTML = `
+        <div class="qa-header">
+            <span class="qa-title">⚡ Création rapide</span>
+            <span class="qa-row-badge" id="qaRowBadge"></span>
+            <button class="qa-close" id="qaClose">×</button>
+        </div>
+        <input class="qa-name-input" id="qaName" type="text" placeholder="Nom de la tâche…" autocomplete="off">
+        <div class="qa-dates">
+            <div class="qa-date-field">
+                <span class="qa-date-label">Début</span>
+                <input class="qa-date-input" id="qaStart" type="date">
+            </div>
+            <div class="qa-date-field">
+                <span class="qa-date-label">Fin</span>
+                <input class="qa-date-input" id="qaEnd" type="date">
+            </div>
+        </div>
+        <div class="qa-colors" id="qaColors"></div>
+        <div class="qa-actions">
+            <span class="qa-hint">↵ Entrée pour créer</span>
+            <button class="btn-ghost" id="qaCancel" style="padding:5px 11px;font-size:11px">Annuler</button>
+            <button class="btn-primary" id="qaConfirm" style="padding:5px 12px;font-size:11px">Créer</button>
+        </div>`;
+    document.body.appendChild(el);
+})();
+
+let _qaRowId = null;
+let _qaColor = TASK_COLORS[0];
+
+function openQuickAdd(rowId, anchorEl) {
+    const row = rows.find(r => r.id === rowId);
+    if (!row) return;
+
+    _qaRowId = rowId;
+    _qaColor = row.color || TASK_COLORS[0];
+
+    // Pre-fill dates: today → today + 7 days
+    const t = new Date(today);
+    const e = new Date(today);
+    e.setDate(e.getDate() + 7);
+    const toYMD = d => d.toISOString().slice(0,10);
+    document.getElementById('qaStart').value = toYMD(t);
+    document.getElementById('qaEnd').value   = toYMD(e);
+    document.getElementById('qaName').value  = '';
+    document.getElementById('qaRowBadge').textContent = row.name || '(sans nom)';
+
+    // Build color swatches
+    const cp = document.getElementById('qaColors');
+    cp.innerHTML = '';
+    TASK_COLORS.forEach(c => {
+        const sw = document.createElement('div');
+        sw.className = 'qa-color-swatch' + (c === _qaColor ? ' selected' : '');
+        sw.style.background = c;
+        sw.addEventListener('click', () => {
+            _qaColor = c;
+            cp.querySelectorAll('.qa-color-swatch').forEach(s => s.classList.remove('selected'));
+            sw.classList.add('selected');
+        });
+        cp.appendChild(sw);
+    });
+
+    // Position popover near the anchor button
+    const pop = document.getElementById('quickAddPopover');
+    pop.classList.add('open');
+    const rect = anchorEl.getBoundingClientRect();
+    const popW = 310;
+    let left = rect.left;
+    if (left + popW > window.innerWidth - 10) left = window.innerWidth - popW - 10;
+    let top  = rect.bottom + 6;
+    if (top + 280 > window.innerHeight - 10) top = rect.top - 280 - 6;
+    pop.style.left = left + 'px';
+    pop.style.top  = top  + 'px';
+
+    setTimeout(() => document.getElementById('qaName').focus(), 30);
+}
+
+function closeQuickAdd() {
+    document.getElementById('quickAddPopover').classList.remove('open');
+    _qaRowId = null;
+}
+
+function confirmQuickAdd() {
+    const name  = document.getElementById('qaName').value.trim() || 'Tâche';
+    const start = document.getElementById('qaStart').value;
+    const end   = document.getElementById('qaEnd').value;
+    if (!start || !end || end <= start) {
+        document.getElementById('qaEnd').style.borderColor = 'var(--danger)';
+        setTimeout(() => { document.getElementById('qaEnd').style.borderColor = ''; }, 1500);
+        return;
+    }
+    const row = rows.find(r => r.id === _qaRowId);
+    if (!row) return;
+
+    if (overlaps(row.tasks, start, end)) {
+        document.getElementById('qaStart').style.borderColor = 'var(--danger)';
+        document.getElementById('qaEnd').style.borderColor   = 'var(--danger)';
+        showToast('⚠ Chevauchement avec une tâche existante', true);
+        setTimeout(() => {
+            document.getElementById('qaStart').style.borderColor = '';
+            document.getElementById('qaEnd').style.borderColor   = '';
+        }, 1500);
+        return;
+    }
+
+    pushUndo();
+    row.tasks.push({
+        id: taskIdCounter++,
+        name,
+        start,
+        end,
+        color: _qaColor,
+        etp: 0,
+        tjm: 0,
+        progress: 0,
+        status: null,
+        notes: null,
+        metier: null,
+        batiments: [],
+        objectives: [],
+        createdBy: _cachedClientId || null
+    });
+
+    closeQuickAdd();
+    render();
+    saveToStorage();
+    showToast('✅ Tâche "' + name + '" créée');
+}
+
+document.getElementById('qaConfirm').addEventListener('click', confirmQuickAdd);
+document.getElementById('qaCancel').addEventListener('click', closeQuickAdd);
+document.getElementById('qaClose').addEventListener('click', closeQuickAdd);
+
+// Keyboard: Enter = confirm, Esc = close
+document.getElementById('quickAddPopover').addEventListener('keydown', e => {
+    if (e.key === 'Enter')  { e.preventDefault(); confirmQuickAdd(); }
+    if (e.key === 'Escape') { e.preventDefault(); closeQuickAdd(); }
+});
+
+// Click outside = close
+document.addEventListener('mousedown', e => {
+    const pop = document.getElementById('quickAddPopover');
+    if (pop.classList.contains('open') && !pop.contains(e.target) && !e.target.classList.contains('row-quick-add-btn')) {
+        closeQuickAdd();
+    }
+});
+
+// Shortcut: press 'Q' anywhere (when not in an input) to open quick add on first row
+document.addEventListener('keydown', e => {
+    if (e.key === 'q' && document.activeElement === document.body) {
+        const firstBtn = document.querySelector('.row-quick-add-btn');
+        if (firstBtn) firstBtn.click();
+    }
+});
+
 // Initialize the application
 (async function init() {
     dbg('═══════════════════════════════════════════════════════');
