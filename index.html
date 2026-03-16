@@ -386,7 +386,7 @@
             min-width: var(--label-w);
             width: var(--label-w);
             display: grid;
-            grid-template-columns: 16px 6px minmax(0, 1fr) auto auto auto;
+            grid-template-columns: 16px 12px minmax(0, 1fr) auto auto auto;
             align-items: center;
             padding: 0 10px 0 14px;
             border-right: 1px solid var(--border);
@@ -398,10 +398,54 @@
         }
 
         .row-color-dot {
-            width: 6px;
-            height: 6px;
+            width: 12px;
+            height: 12px;
             border-radius: 50%;
             flex-shrink: 0;
+            cursor: pointer;
+            border: 1px solid rgba(255,255,255,0.38);
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.5), inset 0 0 0 1px rgba(255,255,255,0.16);
+            transition: transform 0.12s, box-shadow 0.12s, filter 0.12s;
+        }
+        .gantt-row:hover .row-color-dot {
+            transform: scale(1.08);
+            filter: saturate(1.1);
+        }
+        .row-color-dot:hover {
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.55), 0 0 0 3px rgba(99,102,241,0.18), inset 0 0 0 1px rgba(255,255,255,0.2);
+        }
+        .row-color-dot:focus-visible {
+            outline: none;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.55), 0 0 0 3px rgba(99,102,241,0.4), inset 0 0 0 1px rgba(255,255,255,0.2);
+        }
+
+        .row-color-picker {
+            position: fixed;
+            z-index: 2200;
+            display: none;
+            grid-template-columns: repeat(5, 18px);
+            gap: 8px;
+            padding: 9px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-shadow: 0 12px 32px rgba(0,0,0,0.55), 0 2px 8px rgba(0,0,0,0.35);
+        }
+        .row-color-picker.open { display: grid; }
+
+        .row-color-swatch {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            cursor: pointer;
+            border: 2px solid transparent;
+            box-shadow: 0 0 0 1px rgba(0,0,0,0.45), inset 0 0 0 1px rgba(255,255,255,0.2);
+            transition: transform 0.12s, border-color 0.12s;
+        }
+        .row-color-swatch:hover { transform: scale(1.12); }
+        .row-color-swatch.selected {
+            border-color: white;
+            transform: scale(1.12);
         }
 
         .row-label input {
@@ -4522,6 +4566,7 @@ let dragState = null;
 let resizeState = null;
 let dragMoved = false;
 let rowDragState = null;
+let rowColorPickerRowId = null;
 
 const today = new Date();
 today.setHours(0,0,0,0);
@@ -4983,6 +5028,20 @@ function buildRowDiv(row, colW, trackW, isChild) {
     const dot = document.createElement('div');
     dot.className = 'row-color-dot';
     dot.style.background = row.color || TASK_COLORS[0];
+    dot.title = 'Changer la couleur de la ligne';
+    dot.tabIndex = 0;
+    dot.setAttribute('role', 'button');
+    dot.addEventListener('click', e => {
+        e.stopPropagation();
+        openRowColorPicker(row.id, dot);
+    });
+    dot.addEventListener('keydown', e => {
+        if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            e.stopPropagation();
+            openRowColorPicker(row.id, dot);
+        }
+    });
     const inp = document.createElement('input');
     inp.type = 'text';
     inp.value = row.name;
@@ -5481,6 +5540,81 @@ function createTaskBar(task, row) {
     });
 
     return bar;
+}
+
+function ensureRowColorPicker() {
+    let picker = document.getElementById('rowColorPicker');
+    if (picker) return picker;
+
+    picker = document.createElement('div');
+    picker.id = 'rowColorPicker';
+    picker.className = 'row-color-picker';
+
+    TASK_COLORS.forEach(c => {
+        const sw = document.createElement('button');
+        sw.type = 'button';
+        sw.className = 'row-color-swatch';
+        sw.style.background = c;
+        sw.title = 'Choisir ' + c;
+        sw.dataset.color = c;
+        sw.addEventListener('click', e => {
+            e.stopPropagation();
+            if (rowColorPickerRowId === null) return;
+            applyRowColor(rowColorPickerRowId, c);
+        });
+        picker.appendChild(sw);
+    });
+
+    document.body.appendChild(picker);
+    return picker;
+}
+
+function closeRowColorPicker() {
+    const picker = document.getElementById('rowColorPicker');
+    if (picker) picker.classList.remove('open');
+    rowColorPickerRowId = null;
+}
+
+function openRowColorPicker(rowId, anchorEl) {
+    const row = rows.find(r => r.id === rowId);
+    if (!row || !anchorEl) return;
+
+    const picker = ensureRowColorPicker();
+    rowColorPickerRowId = row.id;
+
+    const currentColor = row.color || TASK_COLORS[0];
+    picker.querySelectorAll('.row-color-swatch').forEach(sw => {
+        sw.classList.toggle('selected', sw.dataset.color === currentColor);
+    });
+
+    picker.classList.add('open');
+    const rect = anchorEl.getBoundingClientRect();
+    const pRect = picker.getBoundingClientRect();
+
+    let left = rect.left - ((pRect.width - rect.width) / 2);
+    left = Math.max(8, Math.min(left, window.innerWidth - pRect.width - 8));
+
+    let top = rect.bottom + 8;
+    if (top + pRect.height > window.innerHeight - 8) top = rect.top - pRect.height - 8;
+    if (top < 8) top = 8;
+
+    picker.style.left = left + 'px';
+    picker.style.top = top + 'px';
+}
+
+function applyRowColor(rowId, color) {
+    const row = rows.find(r => r.id === rowId);
+    if (!row) return;
+
+    pushUndo();
+    row.color = color;
+
+    // Row color is authoritative: tasks on this row inherit this color.
+    row.tasks.forEach(task => { task.color = color; });
+
+    closeRowColorPicker();
+    render();
+    saveToStorage();
 }
 
 // ─── DRAG & RESIZE ────────────────────────────────────────────────────────────
@@ -10432,6 +10566,17 @@ document.addEventListener('mousedown', e => {
     if (pop.classList.contains('open') && !pop.contains(e.target) && !e.target.classList.contains('row-quick-add-btn')) {
         closeQuickAdd();
     }
+
+    const rowColorPicker = document.getElementById('rowColorPicker');
+    if (rowColorPicker && rowColorPicker.classList.contains('open')) {
+        if (!rowColorPicker.contains(e.target) && !e.target.classList.contains('row-color-dot')) {
+            closeRowColorPicker();
+        }
+    }
+});
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'Escape') closeRowColorPicker();
 });
 
 // Shortcut: press 'Q' anywhere (when not in an input) to open quick add on first row
