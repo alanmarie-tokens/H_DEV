@@ -435,26 +435,16 @@
 
         .row-color-custom-wrap {
             grid-column: 1 / -1;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 8px;
-            padding-top: 5px;
+            padding-top: 6px;
             border-top: 1px solid var(--border-subtle);
             margin-top: 2px;
         }
-        .row-color-custom-label {
-            font-size: 9px;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            color: var(--text-muted);
-        }
         .row-color-custom-input {
-            width: 26px;
-            height: 18px;
+            width: 100%;
+            height: 28px;
             padding: 0;
             border: 1px solid var(--border);
-            border-radius: 4px;
+            border-radius: 6px;
             background: transparent;
             cursor: pointer;
         }
@@ -5599,21 +5589,17 @@ function ensureRowColorPicker() {
     const customWrap = document.createElement('div');
     customWrap.className = 'row-color-custom-wrap';
 
-    const customLabel = document.createElement('span');
-    customLabel.className = 'row-color-custom-label';
-    customLabel.textContent = 'Couleur RVB';
-
     const customInput = document.createElement('input');
     customInput.type = 'color';
     customInput.className = 'row-color-custom-input';
     customInput.id = 'rowColorCustomInput';
     customInput.title = 'Choisir une couleur personnalisée';
-    customInput.addEventListener('input', e => {
+    customInput.addEventListener('change', e => {
         if (rowColorPickerRowId === null) return;
-        applyRowColor(rowColorPickerRowId, e.target.value);
+        applyRowColor(rowColorPickerRowId, e.target.value, false);
     });
 
-    customWrap.append(customLabel, customInput);
+    customWrap.appendChild(customInput);
     picker.appendChild(customWrap);
 
     document.body.appendChild(picker);
@@ -5680,7 +5666,7 @@ function normalizeColorForPicker(color) {
     return TASK_COLORS[0];
 }
 
-function applyRowColor(rowId, color) {
+function applyRowColor(rowId, color, closePicker = true) {
     const row = rows.find(r => r.id === rowId);
     if (!row) return;
 
@@ -5690,7 +5676,7 @@ function applyRowColor(rowId, color) {
     // Row color is authoritative: tasks on this row inherit this color.
     row.tasks.forEach(task => { task.color = color; });
 
-    closeRowColorPicker();
+    if (closePicker) closeRowColorPicker();
     render();
     saveToStorage();
 }
