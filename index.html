@@ -414,6 +414,24 @@
         }
         .row-label input::placeholder { color: var(--text-muted); }
 
+        .row-grip {
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            opacity: 0;
+            transition: opacity 0.12s;
+            color: var(--text-muted);
+            font-size: 12px;
+            flex-shrink: 0;
+            user-select: none;
+        }
+        .gantt-row:hover .row-grip { opacity: 1; }
+        .row-grip:hover { color: var(--text-soft); }
+        .row-grip:active { cursor: grabbing; }
+
         .row-del {
             background: none;
             border: none;
@@ -1461,6 +1479,40 @@
         /* Dragging state — full-app cursor */
         body.is-dragging { cursor: grabbing !important; user-select: none; }
         body.is-resizing { cursor: ew-resize !important; user-select: none; }
+        body.is-dragging-row { cursor: grabbing !important; user-select: none; }
+
+        /* Row dragging states */
+        .gantt-row.dragging-row {
+            opacity: 0.4;
+            background: var(--surface2) !important;
+        }
+        .gantt-row.row-drop-target {
+            background: rgba(99,102,241,0.08) !important;
+            box-shadow: inset 0 0 0 2px rgba(99,102,241,0.3);
+        }
+        .gantt-row.row-drop-before::before,
+        .gantt-row.row-drop-after::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: var(--accent);
+            z-index: 10;
+            box-shadow: 0 0 4px var(--accent);
+        }
+        .gantt-row.row-drop-before::before { top: -1px; }
+        .gantt-row.row-drop-after::after { bottom: -1px; }
+
+        .gantt-group-header.group-drop-target {
+            background: rgba(99,102,241,0.08) !important;
+            box-shadow: inset 0 0 0 2px rgba(99,102,241,0.3);
+        }
+
+        .group-rows-container.group-drop-target {
+            background: rgba(99,102,241,0.05) !important;
+            box-shadow: inset 0 0 0 1px rgba(99,102,241,0.2);
+        }
 
         /* Drop target glow */
         .gantt-row.drop-target {
@@ -4467,6 +4519,7 @@ let selectedColor = TASK_COLORS[0];
 let dragState = null;
 let resizeState = null;
 let dragMoved = false;
+let rowDragState = null;
 
 const today = new Date();
 today.setHours(0,0,0,0);
@@ -4918,6 +4971,13 @@ function buildRowDiv(row, colW, trackW, isChild) {
     // Label
     const lbl = document.createElement('div');
     lbl.className = 'row-label';
+
+    // Grip handle for drag-and-drop
+    const grip = document.createElement('div');
+    grip.className = 'row-grip';
+    grip.textContent = '⋮⋮';
+    grip.title = 'Glisser pour réorganiser';
+
     const dot = document.createElement('div');
     dot.className = 'row-color-dot';
     dot.style.background = row.color || TASK_COLORS[0];
@@ -4943,7 +5003,7 @@ function buildRowDiv(row, colW, trackW, isChild) {
     backlogBadge.className = 'row-backlog-badge';
     backlogBadge.dataset.rowBadgeId = row.id;
 
-    lbl.append(dot, inp, backlogBadge, qaBtn, del);
+    lbl.append(grip, dot, inp, backlogBadge, qaBtn, del);
 
     // Track
     const track = document.createElement('div');
@@ -5038,6 +5098,19 @@ function buildRowDiv(row, colW, trackW, isChild) {
         </div>`;
 
     rowDiv.append(lbl, track, recap);
+
+    // ── Row drag-and-drop with grip handle ──
+    grip.addEventListener('mousedown', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        rowDragState = {
+            row,
+            rowDiv,
+            startY: e.clientY,
+            armed: true
+        };
+    });
+
     return rowDiv;
 }
 
@@ -5550,11 +5623,167 @@ document.addEventListener('mousemove', e => {
         const fmtD = d => d.toLocaleDateString('fr-FR', { day:'2-digit', month:'short' });
         showDragLabel(e.clientX, e.clientY, fmtD(resizeState.dir === 'left' ? ns : ne));
     }
+
+    // ── Row drag (reordering rows) ──
+    if (rowDragState) {
+        const dy = e.clientY - rowDragState.startY;
+        if (!rowDragState.active && Math.abs(dy) < 4) return;
+
+        if (!rowDragState.active) {
+            rowDragState.active = true;
+            rowDragState.rowDiv.classList.add('dragging-row');
+            document.body.classList.add('is-dragging-row');
+        }
+
+        // Detect drop target
+        const elUnder = document.elementFromPoint(e.clientX, e.clientY);
+
+        // Clear previous highlights
+        document.querySelectorAll('.gantt-row.row-drop-target, .gantt-row.row-drop-before, .gantt-row.row-drop-after').forEach(r => {
+            r.classList.remove('row-drop-target', 'row-drop-before', 'row-drop-after');
+        });
+        document.querySelectorAll('.gantt-group-header.group-drop-target').forEach(g => {
+            g.classList.remove('group-drop-target');
+        });
+        document.querySelectorAll('.group-rows-container.group-drop-target').forEach(c => {
+            c.classList.remove('group-drop-target');
+        });
+
+        // Check if hovering over a row
+        const targetRowDiv = elUnder?.closest('.gantt-row');
+        const targetGroupHeader = elUnder?.closest('.gantt-group-header');
+        const targetGroupContainer = elUnder?.closest('.group-rows-container');
+
+        if (targetRowDiv && targetRowDiv !== rowDragState.rowDiv) {
+            const targetRowId = parseInt(targetRowDiv.dataset.rowId);
+            const targetRow = rows.find(r => r.id === targetRowId);
+            const rect = targetRowDiv.getBoundingClientRect();
+            const mid = rect.top + rect.height / 2;
+
+            // Determine if we should insert before or after
+            if (e.clientY < mid) {
+                targetRowDiv.classList.add('row-drop-before');
+                rowDragState.dropTarget = { type: 'row', targetRow, position: 'before' };
+            } else {
+                targetRowDiv.classList.add('row-drop-after');
+                rowDragState.dropTarget = { type: 'row', targetRow, position: 'after' };
+            }
+        } else if (targetGroupHeader) {
+            // Hovering over a group header - will add to end of that group
+            const groupId = parseInt(targetGroupHeader.dataset.groupId);
+            const group = groups.find(g => g.id === groupId);
+            if (group) {
+                targetGroupHeader.classList.add('group-drop-target');
+                rowDragState.dropTarget = { type: 'group', group };
+            }
+        } else if (targetGroupContainer) {
+            // Hovering over empty space in a group container - add to end of that group
+            const groupId = parseInt(targetGroupContainer.dataset.groupId);
+            const group = groups.find(g => g.id === groupId);
+            if (group) {
+                targetGroupContainer.classList.add('group-drop-target');
+                rowDragState.dropTarget = { type: 'group', group };
+            }
+        } else {
+            rowDragState.dropTarget = null;
+        }
+    }
 });
 
 document.addEventListener('mouseup', () => {
     removeSnapLine();
     hideDragLabel();
+
+    // ── Row drag cleanup and drop logic ──
+    if (rowDragState) {
+        document.body.classList.remove('is-dragging-row');
+        document.querySelectorAll('.gantt-row.row-drop-target, .gantt-row.row-drop-before, .gantt-row.row-drop-after').forEach(r => {
+            r.classList.remove('row-drop-target', 'row-drop-before', 'row-drop-after');
+        });
+        document.querySelectorAll('.gantt-group-header.group-drop-target').forEach(g => {
+            g.classList.remove('group-drop-target');
+        });
+        document.querySelectorAll('.group-rows-container.group-drop-target').forEach(c => {
+            c.classList.remove('group-drop-target');
+        });
+
+        if (rowDragState.active) {
+            pushUndo();
+            const draggedRow = rowDragState.row;
+            const dropTarget = rowDragState.dropTarget;
+
+            if (dropTarget) {
+                if (dropTarget.type === 'row') {
+                    // Dropping relative to another row
+                    const targetRow = dropTarget.targetRow;
+
+                    // Find indices before removal to avoid index shift issues
+                    const currentIndex = rows.findIndex(r => r.id === draggedRow.id);
+                    const targetIndex = rows.findIndex(r => r.id === targetRow.id);
+
+                    if (currentIndex !== -1 && targetIndex !== -1) {
+                        // Remove from current position
+                        rows.splice(currentIndex, 1);
+
+                        // Adopt the group of the target row (or undefined if ungrouped)
+                        draggedRow.groupId = targetRow.groupId;
+
+                        // Calculate adjusted insert index (accounting for removal)
+                        let insertIndex = rows.findIndex(r => r.id === targetRow.id);
+                        if (insertIndex !== -1) {
+                            insertIndex = dropTarget.position === 'before' ? insertIndex : insertIndex + 1;
+                            rows.splice(insertIndex, 0, draggedRow);
+                        } else {
+                            // Fallback: add to end
+                            rows.push(draggedRow);
+                        }
+                    } else if (currentIndex !== -1) {
+                        // Target not found, just remove and add to end
+                        rows.splice(currentIndex, 1);
+                        rows.push(draggedRow);
+                    }
+                } else if (dropTarget.type === 'group') {
+                    // Dropping on a group header - add to end of that group
+                    const group = dropTarget.group;
+                    const currentIndex = rows.findIndex(r => r.id === draggedRow.id);
+
+                    if (currentIndex !== -1) {
+                        rows.splice(currentIndex, 1);
+                    }
+
+                    draggedRow.groupId = group.id;
+
+                    // Find the last row in this group (after removal)
+                    let insertIndex = rows.length;
+                    for (let i = rows.length - 1; i >= 0; i--) {
+                        if (rows[i].groupId === group.id) {
+                            insertIndex = i + 1;
+                            break;
+                        }
+                    }
+
+                    rows.splice(insertIndex, 0, draggedRow);
+                }
+            } else {
+                // No specific drop target - make it ungrouped and add to end
+                const currentIndex = rows.findIndex(r => r.id === draggedRow.id);
+                if (currentIndex !== -1) {
+                    rows.splice(currentIndex, 1);
+                }
+                delete draggedRow.groupId;
+                rows.push(draggedRow);
+            }
+
+            renderBody();
+            saveToStorage();
+        }
+
+        if (rowDragState.rowDiv) {
+            rowDragState.rowDiv.classList.remove('dragging-row');
+        }
+        rowDragState = null;
+    }
+
     if (dragState) {
         document.body.classList.remove('is-dragging');
         if (dragMoved) {
@@ -8271,6 +8500,23 @@ function applyRemoteData(data, isInitialLoad = false) {
         resizeState = null;
         removeSnapLine();
         hideDragLabel();
+    }
+    if (rowDragState && rowDragState.active) {
+        console.log('⚠️ [Firebase] Annulation du déplacement de ligne en cours (mise à jour distante reçue)');
+        document.body.classList.remove('is-dragging-row');
+        if (rowDragState.rowDiv) {
+            rowDragState.rowDiv.classList.remove('dragging-row');
+        }
+        document.querySelectorAll('.gantt-row.row-drop-target, .gantt-row.row-drop-before, .gantt-row.row-drop-after').forEach(r => {
+            r.classList.remove('row-drop-target', 'row-drop-before', 'row-drop-after');
+        });
+        document.querySelectorAll('.gantt-group-header.group-drop-target').forEach(g => {
+            g.classList.remove('group-drop-target');
+        });
+        document.querySelectorAll('.group-rows-container.group-drop-target').forEach(c => {
+            c.classList.remove('group-drop-target');
+        });
+        rowDragState = null;
     }
 
     dbg('🔵 [Firebase] Données distantes valides:', {
