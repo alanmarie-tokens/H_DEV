@@ -2415,8 +2415,36 @@
             color: var(--text-muted);
             font-size: 14px;
         }
+
+        /* ── SYNC STATUS INDICATOR ── */
+        .sync-status {
+            font-size: 11px;
+            font-family: var(--mono);
+            padding: 4px 10px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            background: var(--surface2);
+            white-space: nowrap;
+            display: none; /* hidden by default until Firebase is configured */
+        }
+        .sync-status.visible { display: inline-flex; align-items: center; gap: 5px; }
+        .sync-connecting { color: var(--warning); border-color: rgba(245,158,11,0.3); }
+        .sync-connected  { color: var(--text-dim); }
+        .sync-synced     { color: var(--success);  border-color: rgba(34,197,94,0.3); }
+        .sync-offline    { color: var(--danger);   border-color: rgba(239,68,68,0.3); }
+        .sync-error      { color: var(--danger);   border-color: rgba(239,68,68,0.3); }
+        .sync-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: currentColor; flex-shrink: 0;
+        }
+        .sync-connecting .sync-dot { animation: pulse 1.2s infinite; }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
     </style>
 </head>
+<!-- Firebase Realtime Database SDK (loaded only when needed) -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
 <body>
 
 <div id="loadingOverlay">
@@ -2437,6 +2465,7 @@
     <button class="nav-btn" id="btnExportPNG" title="Exporter en image PNG">🖼 PNG</button>
     <button class="nav-btn" id="btnSave" title="Sauvegarder (Ctrl+S)" style="border-color:var(--accent);color:var(--accent)">💾 Sauvegarder</button>
     <input type="file" id="importFileInput" accept=".json" style="display:none">
+    <span id="syncStatus" class="sync-status" title="État de la synchronisation Firebase"></span>
     <button class="theme-btn" id="btnTheme" style="margin-left:auto" title="Basculer clair/sombre">🌙</button>
 </div>
 
@@ -5403,7 +5432,118 @@ function wrapMutating(fn) {
     return function(...args) { pushUndo(); return fn.apply(this, args); };
 }
 
-// ─── PERSISTANCE LOCALSTORAGE ────────────────────────────
+// ─── CONFIGURATION FIREBASE (synchronisation multi-utilisateurs) ─────────────
+// Pour activer la synchronisation en temps réel entre plusieurs utilisateurs :
+//   1. Créez un projet Firebase sur https://console.firebase.google.com
+//   2. Activez "Realtime Database" (choisir une région Europe si possible)
+//   3. Dans les règles de sécurité, commencez avec les règles de test (lire/écrire)
+//   4. Copiez la configuration de votre projet ci-dessous (Paramètres > Vos apps > Web)
+//
+// Si FIREBASE_CONFIG.databaseURL est vide, l'app fonctionne en mode local (localStorage).
+const FIREBASE_CONFIG = {
+    apiKey:            "",   // ex: "AIzaSy..."
+    authDomain:        "",   // ex: "mon-projet.firebaseapp.com"
+    databaseURL:       "",   // ex: "https://mon-projet-default-rtdb.europe-west1.firebasedatabase.app"
+    projectId:         "",   // ex: "mon-projet-12345"
+    storageBucket:     "",   // ex: "mon-projet-12345.appspot.com"
+    messagingSenderId: "",   // ex: "123456789"
+    appId:             ""    // ex: "1:123456789:web:abcdef"
+};
+
+// Chemin dans la Realtime Database (permet d'héberger plusieurs plannings dans un même projet)
+const DB_PLANNING_PATH = 'planning';
+
+// ─── ÉTAT FIREBASE ─────────────────────────────────────────────────────────
+let firebaseDB = null;
+let firebaseListenerActive = false; // Guard against duplicate listener registration
+
+// Identifiant unique du navigateur courant (pour différencier les clients)
+function getClientId() {
+    let id = localStorage.getItem('gantt_client_id');
+    if (!id) {
+        id = 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 6);
+        localStorage.setItem('gantt_client_id', id);
+    }
+    return id;
+}
+
+function updateSyncStatus(status) {
+    const el = document.getElementById('syncStatus');
+    if (!el) return;
+    const cfg = {
+        connecting: { label: 'Connexion…',      cls: 'sync-connecting' },
+        connected:  { label: 'Connecté',         cls: 'sync-connected'  },
+        synced:     { label: 'Synchronisé',      cls: 'sync-synced'     },
+        offline:    { label: 'Hors ligne',       cls: 'sync-offline'    },
+        error:      { label: 'Erreur sync',      cls: 'sync-error'      }
+    };
+    const c = cfg[status] || cfg.connected;
+    el.className = `sync-status visible ${c.cls}`;
+    el.innerHTML = `<span class="sync-dot"></span>${c.label}`;
+    el.title = `Synchronisation Firebase — état : ${c.label}`;
+}
+
+function applyRemoteData(data) {
+    if (!data || !Array.isArray(data.rows)) return;
+
+    // Apply remote state to local variables
+    rows            = data.rows;
+    groups          = data.groups          || [];
+    milestones      = data.milestones      || [];
+    taskIdCounter   = Math.max(taskIdCounter,   data.taskIdCounter   || 0);
+    groupIdCounter  = Math.max(groupIdCounter,  data.groupIdCounter  || 3);
+    msIdCounter     = Math.max(msIdCounter,     data.msIdCounter     || 0);
+    if (data.zoom)      { zoom = data.zoom; document.querySelectorAll('.zoom-btn').forEach(b => b.classList.toggle('active', b.dataset.zoom === zoom)); }
+    if (data.viewStart) { viewStart = new Date(data.viewStart); }
+
+    // Mirror to localStorage as fallback cache
+    try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify({
+            version: 2, rows, groups, milestones,
+            taskIdCounter, groupIdCounter, msIdCounter,
+            zoom, viewStart: viewStart.toISOString()
+        }));
+    } catch (_) {}
+
+    render();
+    updateSyncStatus('synced');
+    showToast('🔄 Planning mis à jour (autre utilisateur)');
+}
+
+function initFirebaseSync() {
+    if (!FIREBASE_CONFIG.databaseURL) return; // Firebase not configured → local-only mode
+
+    try {
+        firebase.initializeApp(FIREBASE_CONFIG);
+        firebaseDB = firebase.database();
+        updateSyncStatus('connecting');
+
+        // Monitor connection state (single persistent listener, no cleanup needed for SPA)
+        firebaseDB.ref('.info/connected').on('value', snap => {
+            updateSyncStatus(snap.val() ? 'connected' : 'offline');
+        });
+
+    } catch (e) {
+        console.error('Firebase init error:', e);
+        showToast('⚠️ Firebase indisponible — mode local uniquement', true);
+    }
+}
+
+// Called after initial load to start listening for remote changes.
+// Uses _clientId to ignore our own writes — more reliable than a timing flag.
+function startFirebaseListener() {
+    if (!firebaseDB || firebaseListenerActive) return;
+    firebaseListenerActive = true;
+
+    firebaseDB.ref(DB_PLANNING_PATH).on('value', snapshot => {
+        const data = snapshot.val();
+        if (!data) return;
+        if (data._clientId === getClientId()) return; // Skip our own writes
+        applyRemoteData(data);
+    });
+}
+
+// ─── PERSISTANCE LOCALSTORAGE + FIREBASE ─────────────────────────────────────
 const STORAGE_KEY = 'gantt_planning_data';
 let saveInProgress = false;
 
@@ -5424,17 +5564,45 @@ async function saveToStorage() {
             viewStart: viewStart.toISOString()
         };
 
+        // Always persist locally
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+
+        // Sync to Firebase when configured
+        if (firebaseDB) {
+            await firebaseDB.ref(DB_PLANNING_PATH).set({
+                ...data,
+                _clientId: getClientId(),
+                _savedAt:  Date.now()
+            });
+            updateSyncStatus('synced');
+        }
+
         console.log('Planning saved successfully');
     } catch(e) {
-        console.error('Error saving to localStorage:', e);
+        console.error('Error saving to storage:', e);
         showToast('❌ Erreur lors de la sauvegarde', true);
+        if (firebaseDB) updateSyncStatus('error');
     } finally {
         saveInProgress = false;
     }
 }
 
 async function loadFromStorage() {
+    // Try Firebase first (authoritative source when configured)
+    if (firebaseDB) {
+        try {
+            const snapshot = await firebaseDB.ref(DB_PLANNING_PATH).get();
+            const data = snapshot.val();
+            if (data && Array.isArray(data.rows)) {
+                applyRemoteData(data);
+                return true;
+            }
+        } catch (e) {
+            console.warn('Firebase load failed, falling back to localStorage:', e);
+        }
+    }
+
+    // Fallback: localStorage
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
         if (!stored) return false;
@@ -6014,10 +6182,13 @@ document.addEventListener('keydown', e => {
 (async function init() {
     const loadingOverlay = document.getElementById('loadingOverlay');
 
+    // Initialize Firebase connection (no listener yet — avoids race with initial load)
+    initFirebaseSync();
+
     try {
         const loaded = await loadFromStorage();
         if (loaded) {
-            showToast('💾 Planning restauré', false);
+            if (!firebaseDB) showToast('💾 Planning restauré (local)', false);
         } else {
             viewStart = startOfMonth(today);
         }
@@ -6031,6 +6202,9 @@ document.addEventListener('keydown', e => {
 
     render();
     updateUndoButtons();
+
+    // Start real-time listener AFTER initial load to avoid race conditions
+    startFirebaseListener();
 })();
 </script>
 </body>
