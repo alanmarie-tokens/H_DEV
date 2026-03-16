@@ -5291,6 +5291,11 @@ function createTaskBar(task, row) {
     _ttName.textContent = task.name;
     tooltip.appendChild(_ttName);
 
+    const _ttRow = document.createElement('div');
+    _ttRow.className = 'tt-row';
+    _ttRow.innerHTML = `<span class="tt-lbl">Ligne</span><span class="tt-val">${row.name || '(sans nom)'}</span>`;
+    tooltip.appendChild(_ttRow);
+
     // Dates
     const _ttDates = document.createElement('div');
     _ttDates.className = 'tt-row';
@@ -9324,36 +9329,6 @@ function renderDependencyArrows() {
     ganttInner.style.position = 'relative';
     ganttInner.appendChild(svg);
 }
-
-// ─── ENRICHED TOOLTIP on ALL tasks ───────────────────────
-// Patch createTaskBar to add rich tooltip for tasks without objectives
-const origCreateTaskBar = createTaskBar;
-createTaskBar = function(task, row) {
-    const bar = origCreateTaskBar(task, row);
-    if (!bar) return bar;
-    // Only add rich tooltip if no objectives tooltip already attached
-    if (!task.objectives || !task.objectives.length) {
-        const { days, cost, etp } = taskCost(task);
-        const fmtDate = d => new Date(d).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' });
-        const dur = days + ' j. ouvrés';
-        const tip = document.createElement('div');
-        tip.className = 'task-rich-tooltip';
-        tip.innerHTML = `
-            <div class="trt-title">${task.name}</div>
-            <div class="trt-row"><span class="trt-key">Début</span><span class="trt-val">${fmtDate(task.start)}</span></div>
-            <div class="trt-row"><span class="trt-key">Fin</span><span class="trt-val">${fmtDate(task.end)}</span></div>
-            <div class="trt-row"><span class="trt-key">Durée</span><span class="trt-val">${dur}</span></div>
-            ${etp > 0 ? `<div class="trt-row"><span class="trt-key">ETP</span><span class="trt-val hi">${etp} ETP</span></div>` : ''}
-            ${cost > 0 ? `<div class="trt-row"><span class="trt-key">Coût</span><span class="trt-val hi">${fmtCost(cost)}</span></div>` : ''}
-            <div class="trt-pbar"><div class="trt-pfill" style="width:${task.progress || 0}%"></div></div>
-            <div style="font-size:9px;color:var(--text-muted);margin-top:3px;font-family:var(--mono)">${task.progress || 0}% — double-clic pour éditer</div>
-            ${getCreatorTooltipHtml(task)}`;
-        bar.appendChild(tip);
-        bar.addEventListener('mouseenter', () => { if (!dragMoved) tip.classList.add('visible'); });
-        bar.addEventListener('mouseleave', () => setTimeout(() => tip.classList.remove('visible'), 100));
-    }
-    return bar;
-};
 
 // ─── HISTOGRAM DE CHARGE ETP ─────────────────────────────
 let showHistogram = false;
