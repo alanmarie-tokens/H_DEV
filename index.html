@@ -50,24 +50,6 @@
         /* ── RECAP COLUMN ── */
         :root { --recap-w: 200px; }
 
-        .tl-corner-right {
-            min-width: var(--recap-w);
-            width: var(--recap-w);
-            border-left: 1px solid var(--border);
-            padding: 8px 14px;
-            font-size: 10px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            display: flex;
-            align-items: flex-end;
-            position: sticky;
-            right: 0;
-            background: var(--surface);
-            z-index: 15;
-            font-family: var(--font);
-        }
-
         .row-recap {
             min-width: 132px;
             width: max-content;
@@ -294,25 +276,13 @@
             z-index: 20;
             background: var(--surface);
             border-bottom: 1px solid var(--border);
-        }
-
-        .tl-corner {
-            min-width: var(--label-w);
-            width: var(--label-w);
-            border-right: 1px solid var(--border);
-            padding: 8px 14px;
-            font-size: 10px;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            display: flex;
-            align-items: flex-end;
-            font-family: var(--font);
+            padding: 0 var(--recap-w) 0 var(--label-w);
         }
 
         .tl-months {
             flex: 1;
             display: flex;
+            min-width: 0;
         }
 
         .tl-month {
@@ -4127,9 +4097,7 @@
     <div class="gantt-scroll" id="ganttScroll">
         <div class="gantt-inner" id="ganttInner">
             <div class="timeline-header" id="tlHeader">
-                <div class="tl-corner">Projet</div>
                 <div class="tl-months" id="tlMonths"></div>
-                <div class="tl-corner-right">Récap</div>
             </div>
             <div class="gantt-body" id="ganttBody">
                 <div class="empty-state" id="emptyState">
@@ -4882,7 +4850,10 @@ function renderHeader() {
 }
 
 function getColWidth() {
-    const scrollW = document.getElementById('ganttScroll').clientWidth - 200 - 200; // label + recap
+    const rootStyles = getComputedStyle(document.documentElement);
+    const labelW = parseFloat(rootStyles.getPropertyValue('--label-w')) || 200;
+    const recapW = parseFloat(rootStyles.getPropertyValue('--recap-w')) || 200;
+    const scrollW = document.getElementById('ganttScroll').clientWidth - labelW - recapW;
     if (zoom === 'currentweek') return Math.max(80, scrollW / 7);
     const minW = zoom === 'week' ? 36 : zoom === 'month' ? 38 : zoom === 'quarter' ? 44 : 60;
     return Math.max(minW, scrollW / colCount);
