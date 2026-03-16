@@ -1,6 +1,6 @@
 # Planning Gantt - Application Web
 
-Application de planification Gantt accessible via le web avec stockage SQLite persistant.
+Application de planification Gantt accessible via le web avec stockage localStorage.
 
 ## 📋 Description
 
@@ -9,9 +9,25 @@ Cette application de planning Gantt permet de :
 - Organiser les tâches par groupes et métiers
 - Suivre l'avancement, les coûts et les ressources (ETP)
 - Exporter/importer des plannings au format JSON
-- Stocker les données de manière persistante dans une base SQLite
+- Stocker les données de manière persistante dans le navigateur (localStorage)
 
-## 🚀 Installation et Démarrage
+## 🌐 Accès GitHub Pages
+
+L'application est déployée et accessible directement via GitHub Pages :
+
+**URL : [https://nilujien.github.io/H_DEV/](https://nilujien.github.io/H_DEV/)**
+
+Aucune installation n'est nécessaire ! L'application fonctionne entièrement dans votre navigateur avec stockage local des données.
+
+### Caractéristiques du déploiement GitHub Pages
+
+- ✅ Application statique (HTML/CSS/JavaScript)
+- ✅ Stockage des données dans le navigateur (localStorage)
+- ✅ Aucun serveur backend requis
+- ✅ Déploiement automatique via GitHub Actions
+- ✅ Accessible publiquement
+
+## 🚀 Installation et Démarrage (Développement Local)
 
 ### Prérequis
 
@@ -50,42 +66,37 @@ Cette application de planning Gantt permet de :
 
 ```
 H_DEV/
-├── index.html              # Interface utilisateur de l'application
-├── server.js               # Serveur Express avec API REST
-├── package.json            # Dépendances et scripts npm
+├── index.html              # Interface utilisateur de l'application (statique)
+├── .github/
+│   └── workflows/
+│       └── deploy.yml     # Workflow GitHub Actions pour déploiement
+├── server.js               # Serveur Express (optionnel, pour dev local)
+├── package.json            # Dépendances pour développement local
 ├── scripts/
-│   └── init-db.js         # Script d'initialisation de la base de données
-├── planning.db            # Base de données SQLite (créée après init-db)
-├── planning_2026-03-14.json  # Données initiales
+│   └── init-db.js         # Script d'initialisation (optionnel)
 └── .gitignore             # Fichiers à ignorer par Git
 ```
 
-## 🔌 API Endpoints
-
-L'application expose les endpoints suivants :
-
-- **GET /api/planning** - Récupère toutes les données de planning
-- **POST /api/planning** - Sauvegarde l'état complet du planning
-- **GET /api/planning/export** - Exporte le planning au format JSON
-- **GET /api/health** - Vérifie l'état du serveur
-
 ## 💾 Stockage des Données
 
-### Base de données SQLite
+### LocalStorage (navigateur)
 
-Les données sont stockées dans `planning.db` avec les tables suivantes :
+Les données sont stockées localement dans votre navigateur via l'API localStorage :
 
-- **planning_state** - État global (zoom, vue, compteurs)
-- **groups** - Groupes de tâches
-- **rows** - Lignes du planning
-- **tasks** - Tâches individuelles
-- **task_objectives** - Objectifs des tâches
-- **task_deps** - Dépendances entre tâches
-- **milestones** - Jalons
+- Toutes les modifications sont automatiquement sauvegardées
+- Les données persistent même après fermeture du navigateur
+- Chaque navigateur a son propre stockage (les données ne sont pas partagées entre navigateurs)
+- Capacité : environ 5-10 MB (suffisant pour des plannings complexes)
 
 ### Sauvegarde automatique
 
-L'application sauvegarde automatiquement toutes les modifications dans la base de données après un délai de 400ms (debounced).
+L'application sauvegarde automatiquement toutes les modifications dans localStorage après un délai de 400ms (debounced).
+
+### Export/Import
+
+Pour sauvegarder vos données ou les transférer :
+1. Utilisez le bouton "Export JSON" pour télécharger vos données
+2. Utilisez le bouton "Import JSON" pour charger des données sauvegardées
 
 ## 🌐 Accès Web sans Rendre le Dépôt Public
 
@@ -128,52 +139,45 @@ npm start
 ngrok http 3000
 ```
 
-## ⚠️ Effets de Bord Identifiés
+## ⚠️ Notes Importantes
 
-### 1. Migration de localStorage vers API
+### 1. Stockage Local
 
-**Impact** : L'application utilisait auparavant `localStorage` du navigateur pour stocker les données. Maintenant elle utilise une API REST avec SQLite.
-
-**Conséquences** :
-- Les données stockées précédemment dans `localStorage` ne seront PAS automatiquement migrées
-- Si vous aviez des données dans `localStorage`, utilisez la fonction "Export" pour les sauvegarder avant de passer à la nouvelle version
-- Après migration, utilisez "Import" pour charger les anciennes données
-
-### 2. Base de données SQLite
-
-**Impact** : La base de données est un fichier local sur le serveur.
+**Impact** : L'application utilise localStorage du navigateur pour stocker les données.
 
 **Conséquences** :
-- Les données sont persistantes mais liées au serveur spécifique
-- En cas de déploiement multi-instances, chaque instance aura sa propre base
-- Pour un environnement de production avec plusieurs instances, il faudrait migrer vers une base de données centralisée (PostgreSQL, MySQL)
+- Les données sont stockées uniquement dans votre navigateur
+- Chaque navigateur/appareil a son propre stockage indépendant
+- Si vous videz le cache/localStorage du navigateur, vous perdez vos données
+- **Important** : Utilisez la fonction "Export JSON" régulièrement pour sauvegarder vos plannings
 
-### 3. Concurrence
+### 2. Sauvegarde et backup
 
-**Impact** : L'application utilise des transactions SQLite pour les écritures.
-
-**Conséquences** :
-- SQLite supporte un seul écrivain à la fois
-- Pour un usage avec beaucoup d'utilisateurs simultanés, considérez une base relationnelle (PostgreSQL)
-- L'application actuelle est optimale pour 1-10 utilisateurs simultanés
-
-### 4. Sauvegarde et backup
-
-**Impact** : La base de données est dans un fichier `planning.db`.
+**Impact** : Les données sont dans le navigateur uniquement.
 
 **Recommandations** :
-- Sauvegardez régulièrement le fichier `planning.db`
-- Utilisez la fonction "Export JSON" pour créer des snapshots
-- Le fichier `.db` est ignoré par Git (`.gitignore`), donc pas de backup automatique
+- Exportez régulièrement vos plannings (bouton "Export JSON")
+- Sauvegardez les fichiers JSON exportés dans un endroit sûr
+- Pour partager un planning : exportez le JSON et envoyez le fichier à vos collaborateurs
+- Pour transférer vers un autre navigateur/appareil : exportez puis importez le JSON
 
-### 5. Réseau et latence
+### 3. Capacité de stockage
 
-**Impact** : Les données transitent maintenant via HTTP au lieu d'être locales.
+**Impact** : localStorage a une limite de ~5-10 MB selon les navigateurs.
 
 **Conséquences** :
-- Légère latence lors du chargement initial
-- Dépendance à la connexion réseau
-- Un indicateur de chargement a été ajouté pour améliorer l'expérience utilisateur
+- Suffisant pour des plannings complexes avec des centaines de tâches
+- Si vous atteignez la limite, l'application affichera une erreur
+- Solution : exportez et archivez les anciens plannings, puis créez-en de nouveaux
+
+### 4. Compatibilité navigateur
+
+**Impact** : L'application utilise des fonctionnalités JavaScript modernes.
+
+**Recommandations** :
+- Utilisez un navigateur récent (Chrome, Firefox, Safari, Edge)
+- Activez JavaScript
+- Autorisez le localStorage pour le site
 
 ## 🔧 Configuration Avancée
 
