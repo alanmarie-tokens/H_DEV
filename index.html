@@ -8501,6 +8501,23 @@ function applyRemoteData(data, isInitialLoad = false) {
         removeSnapLine();
         hideDragLabel();
     }
+    if (rowDragState && rowDragState.active) {
+        console.log('⚠️ [Firebase] Annulation du déplacement de ligne en cours (mise à jour distante reçue)');
+        document.body.classList.remove('is-dragging-row');
+        if (rowDragState.rowDiv) {
+            rowDragState.rowDiv.classList.remove('dragging-row');
+        }
+        document.querySelectorAll('.gantt-row.row-drop-target, .gantt-row.row-drop-before, .gantt-row.row-drop-after').forEach(r => {
+            r.classList.remove('row-drop-target', 'row-drop-before', 'row-drop-after');
+        });
+        document.querySelectorAll('.gantt-group-header.group-drop-target').forEach(g => {
+            g.classList.remove('group-drop-target');
+        });
+        document.querySelectorAll('.group-rows-container.group-drop-target').forEach(c => {
+            c.classList.remove('group-drop-target');
+        });
+        rowDragState = null;
+    }
 
     dbg('🔵 [Firebase] Données distantes valides:', {
         rowsCount: data.rows.length,
