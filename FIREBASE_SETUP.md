@@ -4,7 +4,10 @@ Ce guide explique comment activer la synchronisation en temps réel de votre pla
 
 ## Vue d'ensemble
 
-Sans configuration Firebase, l'application fonctionne en **mode local** : les données sont sauvegardées dans le `localStorage` du navigateur. Chaque utilisateur voit sa propre copie des données.
+**Firebase Realtime Database est REQUIS** pour que l'application fonctionne. Toutes les données sont stockées dans Firebase uniquement :
+- Les données de planning (lignes, tâches, jalons)
+- Les préférences utilisateur (thème, configuration des KPI)
+- Les identifiants clients pour la synchronisation multi-utilisateurs
 
 Avec Firebase Realtime Database, toutes les modifications sont **synchronisées instantanément** entre tous les utilisateurs ouverts sur la même page.
 
@@ -102,10 +105,10 @@ const FIREBASE_CONFIG = {
 
 | Scénario | Comportement |
 |----------|-------------|
-| Un utilisateur sauvegarde | Les données sont envoyées à Firebase ET au localStorage local |
+| Un utilisateur sauvegarde | Les données sont envoyées à Firebase en temps réel |
 | Un autre utilisateur a la page ouverte | Il reçoit la mise à jour en **temps réel** et le planning se rafraîchit automatiquement |
-| Firebase est indisponible (réseau coupé) | L'app continue à fonctionner en mode local (localStorage) |
-| Pas de configuration Firebase | L'app fonctionne uniquement en localStorage (comportement d'origine) |
+| Firebase est indisponible (réseau coupé) | L'application affiche une erreur et empêche les modifications jusqu'au rétablissement de la connexion |
+| Pas de configuration Firebase | L'application affiche un message d'erreur au démarrage et ne fonctionne pas |
 
 ### Indicateur de synchronisation (en-tête)
 

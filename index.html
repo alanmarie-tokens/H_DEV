@@ -5436,13 +5436,15 @@ function wrapMutating(fn) {
 }
 
 // ─── CONFIGURATION FIREBASE (synchronisation multi-utilisateurs) ─────────────
+// Firebase Realtime Database est REQUIS pour que l'application fonctionne.
 // Pour activer la synchronisation en temps réel entre plusieurs utilisateurs :
 //   1. Créez un projet Firebase sur https://console.firebase.google.com
 //   2. Activez "Realtime Database" (choisir une région Europe si possible)
 //   3. Dans les règles de sécurité, commencez avec les règles de test (lire/écrire)
 //   4. Copiez la configuration de votre projet ci-dessous (Paramètres > Vos apps > Web)
 //
-// Si FIREBASE_CONFIG.databaseURL est vide, l'app fonctionne en mode local (localStorage).
+// IMPORTANT: La configuration Firebase doit être complète pour que l'application fonctionne.
+// Toutes les données (planning, préférences utilisateur) sont stockées dans Firebase uniquement.
 const FIREBASE_CONFIG = {
     apiKey:            "AIzaSyAT4342sQSS5Vv_oM9Xce2jXMkh2ZkotbM",   // ex: "AIzaSy..."
     authDomain:        "hdev-c3842.firebaseapp.com",   // ex: "mon-projet.firebaseapp.com"
