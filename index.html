@@ -1509,6 +1509,11 @@
             box-shadow: inset 0 0 0 2px rgba(99,102,241,0.3);
         }
 
+        .group-rows-container.group-drop-target {
+            background: rgba(99,102,241,0.05) !important;
+            box-shadow: inset 0 0 0 1px rgba(99,102,241,0.2);
+        }
+
         /* Drop target glow */
         .gantt-row.drop-target {
             background: rgba(99,102,241,0.05) !important;
@@ -5640,6 +5645,9 @@ document.addEventListener('mousemove', e => {
         document.querySelectorAll('.gantt-group-header.group-drop-target').forEach(g => {
             g.classList.remove('group-drop-target');
         });
+        document.querySelectorAll('.group-rows-container.group-drop-target').forEach(c => {
+            c.classList.remove('group-drop-target');
+        });
 
         // Check if hovering over a row
         const targetRowDiv = elUnder?.closest('.gantt-row');
@@ -5695,41 +5703,57 @@ document.addEventListener('mouseup', () => {
         document.querySelectorAll('.gantt-group-header.group-drop-target').forEach(g => {
             g.classList.remove('group-drop-target');
         });
+        document.querySelectorAll('.group-rows-container.group-drop-target').forEach(c => {
+            c.classList.remove('group-drop-target');
+        });
 
         if (rowDragState.active) {
             pushUndo();
             const draggedRow = rowDragState.row;
             const dropTarget = rowDragState.dropTarget;
 
-            // Remove row from current position
-            const currentIndex = rows.findIndex(r => r.id === draggedRow.id);
-            if (currentIndex !== -1) {
-                rows.splice(currentIndex, 1);
-            }
-
             if (dropTarget) {
                 if (dropTarget.type === 'row') {
                     // Dropping relative to another row
                     const targetRow = dropTarget.targetRow;
+
+                    // Find indices before removal to avoid index shift issues
+                    const currentIndex = rows.findIndex(r => r.id === draggedRow.id);
                     const targetIndex = rows.findIndex(r => r.id === targetRow.id);
 
-                    if (targetIndex !== -1) {
+                    if (currentIndex !== -1 && targetIndex !== -1) {
+                        // Remove from current position
+                        rows.splice(currentIndex, 1);
+
                         // Adopt the group of the target row (or undefined if ungrouped)
                         draggedRow.groupId = targetRow.groupId;
 
-                        // Insert before or after target
-                        const insertIndex = dropTarget.position === 'before' ? targetIndex : targetIndex + 1;
-                        rows.splice(insertIndex, 0, draggedRow);
-                    } else {
-                        // Fallback: add to end
+                        // Calculate adjusted insert index (accounting for removal)
+                        let insertIndex = rows.findIndex(r => r.id === targetRow.id);
+                        if (insertIndex !== -1) {
+                            insertIndex = dropTarget.position === 'before' ? insertIndex : insertIndex + 1;
+                            rows.splice(insertIndex, 0, draggedRow);
+                        } else {
+                            // Fallback: add to end
+                            rows.push(draggedRow);
+                        }
+                    } else if (currentIndex !== -1) {
+                        // Target not found, just remove and add to end
+                        rows.splice(currentIndex, 1);
                         rows.push(draggedRow);
                     }
                 } else if (dropTarget.type === 'group') {
                     // Dropping on a group header - add to end of that group
                     const group = dropTarget.group;
+                    const currentIndex = rows.findIndex(r => r.id === draggedRow.id);
+
+                    if (currentIndex !== -1) {
+                        rows.splice(currentIndex, 1);
+                    }
+
                     draggedRow.groupId = group.id;
 
-                    // Find the last row in this group
+                    // Find the last row in this group (after removal)
                     let insertIndex = rows.length;
                     for (let i = rows.length - 1; i >= 0; i--) {
                         if (rows[i].groupId === group.id) {
@@ -5742,6 +5766,10 @@ document.addEventListener('mouseup', () => {
                 }
             } else {
                 // No specific drop target - make it ungrouped and add to end
+                const currentIndex = rows.findIndex(r => r.id === draggedRow.id);
+                if (currentIndex !== -1) {
+                    rows.splice(currentIndex, 1);
+                }
                 delete draggedRow.groupId;
                 rows.push(draggedRow);
             }
