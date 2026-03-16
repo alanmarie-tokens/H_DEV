@@ -4541,7 +4541,7 @@ document.getElementById('importFileInput').addEventListener('change', e => {
             if (!data.rows || !Array.isArray(data.rows)) throw new Error('Format invalide');
             if (data.groups && Array.isArray(data.groups)) { groups = data.groups; }
             if (data.milestones && Array.isArray(data.milestones)) { milestones = data.milestones; }
-            rows = data.rows;
+            rows = normalizeRows(data.rows);
             if (data.taskIdCounter) taskIdCounter = data.taskIdCounter;
             if (data.groupIdCounter) groupIdCounter = data.groupIdCounter;
             if (data.msIdCounter) msIdCounter = data.msIdCounter;
@@ -5388,6 +5388,15 @@ document.addEventListener('mousemove', e => {
 });
 document.addEventListener('mouseup', () => { if (msMoveState) { msMoveState = null; } });
 
+// ─── DATA NORMALIZATION ──────────────────────────────────
+function normalizeRows(rows) {
+    if (!Array.isArray(rows)) return [];
+    return rows.map(row => ({
+        ...row,
+        tasks: Array.isArray(row.tasks) ? row.tasks : []
+    }));
+}
+
 // ─── UNDO / REDO ─────────────────────────────────────────
 let undoStack = [];
 let redoStack = [];
@@ -5397,7 +5406,7 @@ function getState() {
 }
 function restoreState(s) {
     const d = JSON.parse(s);
-    rows = d.rows; groups = d.groups; milestones = d.milestones || [];
+    rows = normalizeRows(d.rows); groups = d.groups; milestones = d.milestones || [];
     taskIdCounter = d.taskIdCounter; groupIdCounter = d.groupIdCounter;
     msIdCounter = d.msIdCounter || 0;
 }
@@ -5545,7 +5554,7 @@ function applyRemoteData(data) {
 
     // Apply remote state to local variables
     console.log('🔵 [Firebase] Mise à jour des variables locales...');
-    rows            = data.rows;
+    rows            = normalizeRows(data.rows);
     groups          = data.groups          || [];
     milestones      = data.milestones      || [];
     taskIdCounter   = Math.max(taskIdCounter,   data.taskIdCounter   || 0);
