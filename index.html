@@ -5679,21 +5679,56 @@ async function saveToStorage() {
             console.log('🔵 [Firebase] Client ID:', clientId);
             console.log('🔵 [Firebase] Chemin:', DB_PLANNING_PATH);
 
-            await firebaseDB.ref(DB_PLANNING_PATH).set({
-                ...data,
-                _clientId: clientId,
-                _savedAt:  Date.now()
-            });
+            try {
+                await firebaseDB.ref(DB_PLANNING_PATH).set({
+                    ...data,
+                    _clientId: clientId,
+                    _savedAt:  Date.now()
+                });
 
-            console.log('✅ [Firebase] Données synchronisées avec succès');
-            updateSyncStatus('synced');
+                console.log('✅ [Firebase] Données synchronisées avec succès');
+                updateSyncStatus('synced');
+            } catch (firebaseError) {
+                // Detect specific Firebase errors
+                const errorCode = firebaseError.code;
+                const errorMessage = firebaseError.message;
+
+                console.error('❌ [Firebase] Erreur lors de la synchronisation Firebase:', firebaseError);
+                console.error('❌ [Firebase] Code d\'erreur:', errorCode);
+                console.error('❌ [Firebase] Message:', errorMessage);
+
+                // Check for PERMISSION_DENIED error
+                if (errorCode === 'PERMISSION_DENIED' || errorMessage.includes('permission') || errorMessage.includes('Permission')) {
+                    console.error('🚫 [Firebase] PERMISSION REFUSÉE - Vous n\'avez pas les droits d\'écriture sur Firebase');
+                    console.error('🚫 [Firebase] Cause possible:');
+                    console.error('   1. Les règles de sécurité Firebase interdisent l\'écriture');
+                    console.error('   2. Le mode test Firebase a expiré (30 jours après activation)');
+                    console.error('   3. Firebase Authentication est requis mais non configuré');
+                    console.error('📖 [Firebase] Solution:');
+                    console.error('   → Vérifiez les règles de sécurité dans Firebase Console');
+                    console.error('   → URL: https://console.firebase.google.com/project/' + FIREBASE_CONFIG.projectId + '/database/rules');
+                    console.error('   → Consultez FIREBASE_SETUP.md pour les règles recommandées');
+
+                    showToast('⚠️ Sauvegarde locale OK — Firebase en lecture seule (vérifiez les permissions)', true);
+                    updateSyncStatus('error');
+                } else {
+                    // Other Firebase errors (network, etc.)
+                    console.error('❌ [Firebase] Erreur réseau ou Firebase indisponible');
+                    showToast('⚠️ Sauvegarde locale OK — Firebase temporairement indisponible', true);
+                    updateSyncStatus('offline');
+                }
+
+                // localStorage save succeeded, so don't throw
+                console.log('✅ [Sauvegarde] Planning sauvegardé localement (Firebase échoué)');
+            }
         } else {
             console.log('⚠️ [Firebase] Firebase non configuré, sauvegarde locale uniquement');
         }
 
         console.log('✅ [Sauvegarde] Planning sauvegardé avec succès');
     } catch(e) {
-        console.error('❌ [Sauvegarde] Erreur lors de la sauvegarde:', e);
+        // This catch is for localStorage errors or other critical failures
+        console.error('❌ [Sauvegarde] Erreur critique lors de la sauvegarde:', e);
         console.error('❌ [Sauvegarde] Détails:', e.message);
         showToast('❌ Erreur lors de la sauvegarde', true);
         if (firebaseDB) updateSyncStatus('error');
