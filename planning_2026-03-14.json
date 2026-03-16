@@ -1,0 +1,146 @@
+{
+  "version": 2,
+  "exportedAt": "2026-03-14T07:50:41.176Z",
+  "zoom": "week",
+  "viewStart": "2026-03-12T23:00:00.000Z",
+  "rows": [
+    {
+      "id": 1773421285307,
+      "name": "",
+      "color": "#6366f1",
+      "tasks": [
+        {
+          "id": 4,
+          "name": "Tâche 1",
+          "start": "2026-03-15",
+          "end": "2026-03-20",
+          "color": "#6366f1"
+        }
+      ],
+      "groupId": 1,
+      "metier": "Maintenance"
+    },
+    {
+      "id": 1773421290899,
+      "name": "",
+      "color": "#22c55e",
+      "tasks": [
+        {
+          "id": 0,
+          "name": "Tâche 1",
+          "start": "2026-03-10",
+          "end": "2026-03-15",
+          "color": "#22c55e"
+        }
+      ],
+      "groupId": 1,
+      "metier": "Outils"
+    },
+    {
+      "id": 1773421295420,
+      "name": "",
+      "color": "#f59e0b",
+      "tasks": [
+        {
+          "id": 1,
+          "name": "Tâche 1",
+          "start": "2026-03-15",
+          "end": "2026-03-20",
+          "color": "#f59e0b",
+          "tjm": 0,
+          "etp": 0,
+          "progress": 100,
+          "objectives": [],
+          "deps": []
+        }
+      ],
+      "groupId": 1,
+      "metier": "Gestion"
+    },
+    {
+      "id": 1773421301891,
+      "name": "",
+      "color": "#ef4444",
+      "tasks": [
+        {
+          "id": 5,
+          "name": "Tâche 1",
+          "start": "2026-03-24",
+          "end": "2026-03-28",
+          "color": "#ef4444"
+        }
+      ],
+      "groupId": 1,
+      "metier": "Sécurité"
+    },
+    {
+      "id": 1773421308235,
+      "name": "",
+      "color": "#8b5cf6",
+      "tasks": [
+        {
+          "id": 2,
+          "name": "Tâche 1",
+          "start": "2026-03-15",
+          "end": "2026-03-18",
+          "color": "#8b5cf6"
+        }
+      ],
+      "groupId": 1,
+      "metier": "DAPI"
+    },
+    {
+      "id": 1773421319003,
+      "name": "",
+      "color": "#ec4899",
+      "tasks": [
+        {
+          "id": 6,
+          "name": "Tâche 1",
+          "start": "2026-03-22",
+          "end": "2026-03-26",
+          "color": "#ec4899"
+        }
+      ],
+      "groupId": 1,
+      "metier": "DIG"
+    },
+    {
+      "id": 1773421502076,
+      "name": "",
+      "color": "#06b6d4",
+      "tasks": [
+        {
+          "id": 7,
+          "name": "Tâche 1",
+          "start": "2026-03-17",
+          "end": "2026-03-22",
+          "color": "#06b6d4",
+          "tjm": 0,
+          "etp": 0,
+          "progress": 87,
+          "objectives": [],
+          "deps": []
+        }
+      ],
+      "groupId": 1,
+      "metier": "DD"
+    }
+  ],
+  "groups": [
+    {
+      "id": 1,
+      "name": "Gestion courantes",
+      "collapsed": false
+    },
+    {
+      "id": 2,
+      "name": "Développement",
+      "collapsed": false
+    }
+  ],
+  "milestones": [],
+  "taskIdCounter": 8,
+  "groupIdCounter": 3,
+  "msIdCounter": 0
+}
