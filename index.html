@@ -5463,6 +5463,9 @@ function getClientId() {
     if (!id) {
         id = 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).substr(2, 6);
         localStorage.setItem('gantt_client_id', id);
+        console.log('🔵 [Firebase] Nouveau client ID généré:', id);
+    } else {
+        console.log('🔵 [Firebase] Client ID existant récupéré:', id);
     }
     return id;
 }
@@ -5484,9 +5487,28 @@ function updateSyncStatus(status) {
 }
 
 function applyRemoteData(data) {
-    if (!data || !Array.isArray(data.rows)) return;
+    console.log('🔵 [Firebase] Application des données distantes...');
+
+    if (!data || !Array.isArray(data.rows)) {
+        console.warn('⚠️ [Firebase] Données invalides reçues:', {
+            dataExists: !!data,
+            hasRows: data ? !!data.rows : false,
+            isRowsArray: data ? Array.isArray(data.rows) : false
+        });
+        return;
+    }
+
+    console.log('🔵 [Firebase] Données distantes valides:', {
+        rowsCount: data.rows.length,
+        groupsCount: data.groups ? data.groups.length : 0,
+        milestonesCount: data.milestones ? data.milestones.length : 0,
+        taskIdCounter: data.taskIdCounter,
+        zoom: data.zoom,
+        viewStart: data.viewStart
+    });
 
     // Apply remote state to local variables
+    console.log('🔵 [Firebase] Mise à jour des variables locales...');
     rows            = data.rows;
     groups          = data.groups          || [];
     milestones      = data.milestones      || [];
@@ -5496,35 +5518,65 @@ function applyRemoteData(data) {
     if (data.zoom)      { zoom = data.zoom; document.querySelectorAll('.zoom-btn').forEach(b => b.classList.toggle('active', b.dataset.zoom === zoom)); }
     if (data.viewStart) { viewStart = new Date(data.viewStart); }
 
+    console.log('✅ [Firebase] Variables locales mises à jour');
+
     // Mirror to localStorage as fallback cache
+    console.log('🔵 [Firebase] Synchronisation vers localStorage (cache de secours)...');
     try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify({
             version: 2, rows, groups, milestones,
             taskIdCounter, groupIdCounter, msIdCounter,
             zoom, viewStart: viewStart.toISOString()
         }));
-    } catch (_) {}
+        console.log('✅ [Firebase] localStorage mis à jour avec succès');
+    } catch (e) {
+        console.error('❌ [Firebase] Échec de la mise à jour du localStorage:', e);
+    }
 
+    console.log('🔵 [Firebase] Rendu de l\'interface...');
     render();
     updateSyncStatus('synced');
     showToast('🔄 Planning mis à jour (autre utilisateur)');
+    console.log('✅ [Firebase] Application des données distantes terminée');
 }
 
 function initFirebaseSync() {
-    if (!FIREBASE_CONFIG.databaseURL) return; // Firebase not configured → local-only mode
+    console.log('🔵 [Firebase] Initialisation de Firebase...');
+    console.log('🔵 [Firebase] Configuration:', {
+        projectId: FIREBASE_CONFIG.projectId,
+        authDomain: FIREBASE_CONFIG.authDomain,
+        hasDatabaseURL: !!FIREBASE_CONFIG.databaseURL
+    });
+
+    if (!FIREBASE_CONFIG.databaseURL) {
+        console.warn('⚠️ [Firebase] databaseURL non configurée → mode local uniquement');
+        return; // Firebase not configured → local-only mode
+    }
 
     try {
+        console.log('🔵 [Firebase] Appel de firebase.initializeApp()...');
         firebase.initializeApp(FIREBASE_CONFIG);
+        console.log('✅ [Firebase] firebase.initializeApp() réussi');
+
+        console.log('🔵 [Firebase] Création de la référence à la base de données...');
         firebaseDB = firebase.database();
+        console.log('✅ [Firebase] Référence à la base de données créée:', firebaseDB ? 'OK' : 'ÉCHEC');
+
         updateSyncStatus('connecting');
+        console.log('🔵 [Firebase] Statut mis à jour: "connecting"');
 
         // Monitor connection state (single persistent listener, no cleanup needed for SPA)
+        console.log('🔵 [Firebase] Configuration du listener de connexion (.info/connected)...');
         firebaseDB.ref('.info/connected').on('value', snap => {
-            updateSyncStatus(snap.val() ? 'connected' : 'offline');
+            const isConnected = snap.val();
+            console.log(`🔔 [Firebase] État de connexion mis à jour: ${isConnected ? '✅ CONNECTÉ' : '❌ DÉCONNECTÉ'}`);
+            updateSyncStatus(isConnected ? 'connected' : 'offline');
         });
+        console.log('✅ [Firebase] Listener de connexion activé');
 
     } catch (e) {
-        console.error('Firebase init error:', e);
+        console.error('❌ [Firebase] Erreur lors de l\'initialisation:', e);
+        console.error('❌ [Firebase] Détails de l\'erreur:', e.message, e.code);
         showToast('⚠️ Firebase indisponible — mode local uniquement', true);
     }
 }
@@ -5532,15 +5584,52 @@ function initFirebaseSync() {
 // Called after initial load to start listening for remote changes.
 // Uses _clientId to ignore our own writes — more reliable than a timing flag.
 function startFirebaseListener() {
-    if (!firebaseDB || firebaseListenerActive) return;
+    console.log('🔵 [Firebase] Démarrage du listener Firebase...');
+    console.log('🔵 [Firebase] État - firebaseDB:', firebaseDB ? 'disponible' : 'null');
+    console.log('🔵 [Firebase] État - firebaseListenerActive:', firebaseListenerActive);
+
+    if (!firebaseDB || firebaseListenerActive) {
+        if (!firebaseDB) {
+            console.warn('⚠️ [Firebase] Listener non démarré: firebaseDB est null');
+        } else {
+            console.warn('⚠️ [Firebase] Listener déjà actif, évite les doublons');
+        }
+        return;
+    }
     firebaseListenerActive = true;
+    console.log('✅ [Firebase] firebaseListenerActive défini à true');
+
+    const clientId = getClientId();
+    console.log('🔵 [Firebase] ID du client:', clientId);
+    console.log('🔵 [Firebase] Écoute des changements sur le chemin:', DB_PLANNING_PATH);
 
     firebaseDB.ref(DB_PLANNING_PATH).on('value', snapshot => {
+        console.log('🔔 [Firebase] Événement reçu sur', DB_PLANNING_PATH);
         const data = snapshot.val();
-        if (!data) return;
-        if (data._clientId === getClientId()) return; // Skip our own writes
+
+        if (!data) {
+            console.log('⚠️ [Firebase] Données reçues: null ou undefined');
+            return;
+        }
+
+        console.log('🔵 [Firebase] Données reçues:', {
+            hasRows: Array.isArray(data.rows),
+            rowsCount: data.rows ? data.rows.length : 0,
+            remoteClientId: data._clientId,
+            localClientId: clientId,
+            savedAt: data._savedAt ? new Date(data._savedAt).toISOString() : 'N/A'
+        });
+
+        if (data._clientId === clientId) {
+            console.log('⏭️ [Firebase] Ignorer les modifications de ce client (évite la boucle)');
+            return; // Skip our own writes
+        }
+
+        console.log('✅ [Firebase] Application des données distantes...');
         applyRemoteData(data);
     });
+
+    console.log('✅ [Firebase] Listener Firebase actif et prêt');
 }
 
 // ─── PERSISTANCE LOCALSTORAGE + FIREBASE ─────────────────────────────────────
@@ -5548,8 +5637,13 @@ const STORAGE_KEY = 'gantt_planning_data';
 let saveInProgress = false;
 
 async function saveToStorage() {
-    if (saveInProgress) return;
+    if (saveInProgress) {
+        console.log('⏭️ [Sauvegarde] Sauvegarde déjà en cours, ignoré');
+        return;
+    }
     saveInProgress = true;
+
+    console.log('🔵 [Sauvegarde] Début de la sauvegarde...');
 
     try {
         const data = {
@@ -5564,52 +5658,119 @@ async function saveToStorage() {
             viewStart: viewStart.toISOString()
         };
 
+        console.log('🔵 [Sauvegarde] Données à sauvegarder:', {
+            version: data.version,
+            rowsCount: rows.length,
+            groupsCount: groups.length,
+            milestonesCount: milestones.length,
+            zoom: zoom
+        });
+
         // Always persist locally
+        console.log('🔵 [Sauvegarde] Sauvegarde dans localStorage...');
         localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+        console.log('✅ [Sauvegarde] localStorage sauvegardé avec succès');
 
         // Sync to Firebase when configured
         if (firebaseDB) {
+            const clientId = getClientId();
+            console.log('🔵 [Firebase] Synchronisation avec Firebase...');
+            console.log('🔵 [Firebase] Client ID:', clientId);
+            console.log('🔵 [Firebase] Chemin:', DB_PLANNING_PATH);
+
             await firebaseDB.ref(DB_PLANNING_PATH).set({
                 ...data,
-                _clientId: getClientId(),
+                _clientId: clientId,
                 _savedAt:  Date.now()
             });
+
+            console.log('✅ [Firebase] Données synchronisées avec succès');
             updateSyncStatus('synced');
+        } else {
+            console.log('⚠️ [Firebase] Firebase non configuré, sauvegarde locale uniquement');
         }
 
-        console.log('Planning saved successfully');
+        console.log('✅ [Sauvegarde] Planning sauvegardé avec succès');
     } catch(e) {
-        console.error('Error saving to storage:', e);
+        console.error('❌ [Sauvegarde] Erreur lors de la sauvegarde:', e);
+        console.error('❌ [Sauvegarde] Détails:', e.message);
         showToast('❌ Erreur lors de la sauvegarde', true);
         if (firebaseDB) updateSyncStatus('error');
     } finally {
         saveInProgress = false;
+        console.log('🔵 [Sauvegarde] Sauvegarde terminée (saveInProgress = false)');
     }
 }
 
 async function loadFromStorage() {
+    console.log('🔵 [Chargement] Début du chargement des données...');
+
     // Try Firebase first (authoritative source when configured)
     if (firebaseDB) {
+        console.log('🔵 [Firebase] Firebase configuré, tentative de chargement depuis Firebase...');
+        console.log('🔵 [Firebase] Chemin:', DB_PLANNING_PATH);
+
         try {
             const snapshot = await firebaseDB.ref(DB_PLANNING_PATH).get();
+            console.log('✅ [Firebase] Snapshot récupéré');
+
             const data = snapshot.val();
-            if (data && Array.isArray(data.rows)) {
-                applyRemoteData(data);
-                return true;
+
+            if (data) {
+                console.log('🔵 [Firebase] Données trouvées:', {
+                    hasRows: Array.isArray(data.rows),
+                    rowsCount: data.rows ? data.rows.length : 0,
+                    hasGroups: !!data.groups,
+                    hasMilestones: !!data.milestones,
+                    clientId: data._clientId,
+                    savedAt: data._savedAt ? new Date(data._savedAt).toISOString() : 'N/A'
+                });
+
+                if (Array.isArray(data.rows)) {
+                    console.log('✅ [Firebase] Données valides, application...');
+                    applyRemoteData(data);
+                    console.log('✅ [Chargement] Chargement depuis Firebase réussi');
+                    return true;
+                } else {
+                    console.warn('⚠️ [Firebase] Les données ne contiennent pas de tableau rows valide');
+                }
+            } else {
+                console.log('⚠️ [Firebase] Aucune donnée trouvée dans Firebase');
             }
         } catch (e) {
-            console.warn('Firebase load failed, falling back to localStorage:', e);
+            console.warn('⚠️ [Firebase] Échec du chargement Firebase, basculement vers localStorage:', e);
+            console.warn('⚠️ [Firebase] Détails:', e.message);
         }
+    } else {
+        console.log('⚠️ [Firebase] Firebase non configuré, utilisation de localStorage');
     }
 
     // Fallback: localStorage
+    console.log('🔵 [Chargement] Tentative de chargement depuis localStorage...');
     try {
         const stored = localStorage.getItem(STORAGE_KEY);
-        if (!stored) return false;
 
+        if (!stored) {
+            console.log('⚠️ [Chargement] Aucune donnée trouvée dans localStorage');
+            return false;
+        }
+
+        console.log('🔵 [Chargement] Données trouvées dans localStorage, parsing...');
         const d = JSON.parse(stored);
-        if (!d.rows || !Array.isArray(d.rows)) return false;
 
+        console.log('🔵 [Chargement] Données parsées:', {
+            version: d.version,
+            hasRows: !!d.rows,
+            isRowsArray: Array.isArray(d.rows),
+            rowsCount: d.rows ? d.rows.length : 0
+        });
+
+        if (!d.rows || !Array.isArray(d.rows)) {
+            console.error('❌ [Chargement] Format de données invalide dans localStorage');
+            return false;
+        }
+
+        console.log('🔵 [Chargement] Application des données depuis localStorage...');
         rows = d.rows;
         groups = d.groups || [];
         milestones = d.milestones || [];
@@ -5621,9 +5782,12 @@ async function loadFromStorage() {
             document.querySelectorAll('.zoom-btn').forEach(b => b.classList.toggle('active', b.dataset.zoom === zoom));
         }
         if (d.viewStart) viewStart = new Date(d.viewStart);
+
+        console.log('✅ [Chargement] Chargement depuis localStorage réussi');
         return true;
     } catch(e) {
-        console.error('Error loading from localStorage:', e);
+        console.error('❌ [Chargement] Erreur lors du chargement depuis localStorage:', e);
+        console.error('❌ [Chargement] Détails:', e.message);
         return false;
     }
 }
@@ -6180,31 +6344,53 @@ document.addEventListener('keydown', e => {
 });
 // Initialize the application
 (async function init() {
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🚀 [Application] Initialisation de l\'application...');
+    console.log('═══════════════════════════════════════════════════════');
+
     const loadingOverlay = document.getElementById('loadingOverlay');
 
     // Initialize Firebase connection (no listener yet — avoids race with initial load)
+    console.log('🔵 [Application] Étape 1/4: Initialisation de la connexion Firebase');
     initFirebaseSync();
 
     try {
+        console.log('🔵 [Application] Étape 2/4: Chargement des données');
         const loaded = await loadFromStorage();
+
         if (loaded) {
-            if (!firebaseDB) showToast('💾 Planning restauré (local)', false);
+            console.log('✅ [Application] Données chargées avec succès');
+            if (!firebaseDB) {
+                console.log('⚠️ [Application] Mode local uniquement (Firebase non configuré)');
+                showToast('💾 Planning restauré (local)', false);
+            } else {
+                console.log('✅ [Application] Mode Firebase activé');
+            }
         } else {
+            console.log('⚠️ [Application] Aucune donnée trouvée, initialisation avec données par défaut');
             viewStart = startOfMonth(today);
         }
     } catch (error) {
-        console.error('Initialization error:', error);
+        console.error('❌ [Application] Erreur d\'initialisation:', error);
+        console.error('❌ [Application] Détails:', error.message, error.stack);
         showToast('❌ Erreur de chargement, démarrage avec données vides', true);
         viewStart = startOfMonth(today);
     } finally {
         loadingOverlay.classList.add('hidden');
+        console.log('✅ [Application] Overlay de chargement masqué');
     }
 
+    console.log('🔵 [Application] Étape 3/4: Rendu de l\'interface');
     render();
     updateUndoButtons();
 
     // Start real-time listener AFTER initial load to avoid race conditions
+    console.log('🔵 [Application] Étape 4/4: Démarrage du listener temps réel Firebase');
     startFirebaseListener();
+
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('✅ [Application] Initialisation terminée avec succès!');
+    console.log('═══════════════════════════════════════════════════════');
 })();
 </script>
 </body>
