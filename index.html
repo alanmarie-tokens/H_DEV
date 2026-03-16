@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Planning Gantt v0.2</title>
+    <title>Planning Gantt v0.3</title>
     <link href="https://fonts.googleapis.com/css2?family=Geist:wght@300;400;500;600&family=Geist+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
         :root {
@@ -3447,6 +3447,51 @@
         }
         .backlog-add-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+        .backlog-search {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 5px 10px;
+            border-radius: var(--radius-sm);
+            font-size: 11px;
+            font-family: var(--font);
+            outline: none;
+            width: 160px;
+            transition: border-color 0.12s;
+            margin-left: 6px;
+        }
+        .backlog-search:focus { border-color: var(--accent); }
+        .backlog-search::placeholder { color: var(--text-muted); }
+
+        .backlog-export-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 3px 10px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 11px;
+            font-family: var(--font);
+            transition: all 0.12s;
+            margin-left: 4px;
+        }
+        .backlog-export-btn:hover { border-color: var(--success); color: var(--success); }
+
+        /* Badge "en attente" sur les lignes du Gantt */
+        .row-backlog-badge {
+            font-size: 9px;
+            font-family: var(--mono);
+            font-weight: 600;
+            background: var(--accent-dim);
+            color: var(--accent);
+            border: 1px solid rgba(99,102,241,0.3);
+            border-radius: 10px;
+            padding: 1px 5px;
+            flex-shrink: 0;
+            display: none;
+        }
+        .row-backlog-badge.visible { display: inline-block; }
+
         .backlog-body {
             display: none;
             padding: 0 16px 12px;
@@ -3535,6 +3580,306 @@
         }
         .backlog-chip-del:hover { color: var(--danger); }
 
+        /* Note tooltip sur chip backlog */
+        .backlog-chip-note-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: var(--warning);
+            flex-shrink: 0;
+            cursor: help;
+        }
+
+        /* Modal note backlog */
+        .backlog-note-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+        }
+        .backlog-note-overlay.open { display: flex; }
+        .backlog-note-modal {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 20px;
+            width: 340px;
+            box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+            animation: modalIn 0.15s ease;
+        }
+        .backlog-note-modal h3 {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            margin-bottom: 12px;
+        }
+        .backlog-note-modal textarea {
+            width: 100%;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 8px 11px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-family: var(--font);
+            outline: none;
+            resize: vertical;
+            min-height: 80px;
+            transition: border-color 0.12s;
+        }
+        .backlog-note-modal textarea:focus { border-color: var(--accent); }
+        .backlog-note-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 12px; }
+
+        /* Drag-reorder handle */
+        .backlog-chip-drag-handle {
+            color: var(--text-muted);
+            font-size: 11px;
+            cursor: grab;
+            padding: 0 2px;
+            flex-shrink: 0;
+            line-height: 1;
+        }
+        .backlog-chip-drag-handle:active { cursor: grabbing; }
+        .backlog-chip.drag-over-top    { border-top: 2px solid var(--accent); }
+        .backlog-chip.drag-over-bottom { border-bottom: 2px solid var(--accent); }
+
+        /* ══ LISTE VIEW ══ */
+        .list-view {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .list-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+        .list-table th {
+            text-align: left;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: var(--text-muted);
+            padding: 8px 12px;
+            border-bottom: 1px solid var(--border);
+            font-weight: 600;
+            cursor: pointer;
+            user-select: none;
+            white-space: nowrap;
+        }
+        .list-table th:hover { color: var(--text-soft); }
+        .list-table th .sort-icon { margin-left: 4px; opacity: 0.5; font-size: 9px; }
+        .list-table th.sorted { color: var(--accent); }
+        .list-table th.sorted .sort-icon { opacity: 1; }
+        .list-table td {
+            padding: 9px 12px;
+            border-bottom: 1px solid var(--border-subtle);
+            color: var(--text-soft);
+            vertical-align: middle;
+        }
+        .list-table tr:hover td { background: rgba(255,255,255,0.015); }
+        .list-row-color { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 7px; vertical-align: middle; flex-shrink: 0; }
+        .list-task-name { font-weight: 500; color: var(--text); }
+        .list-row-name { color: var(--text-muted); font-size: 11px; }
+        .list-progress-bar { width: 80px; height: 4px; background: var(--border); border-radius: 2px; display: inline-block; vertical-align: middle; margin-right: 6px; overflow: hidden; }
+        .list-progress-fill { height: 100%; border-radius: 2px; background: var(--accent); }
+        .list-status-pill {
+            font-size: 10px;
+            padding: 2px 8px;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            white-space: nowrap;
+        }
+        .list-edit-btn {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 2px 8px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 10px;
+            font-family: var(--font);
+            transition: all 0.1s;
+        }
+        .list-edit-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .list-filters {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 14px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .list-search {
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            color: var(--text);
+            padding: 6px 12px;
+            border-radius: var(--radius-sm);
+            font-size: 12px;
+            font-family: var(--font);
+            outline: none;
+            width: 220px;
+            transition: border-color 0.12s;
+        }
+        .list-search:focus { border-color: var(--accent); }
+        .list-search::placeholder { color: var(--text-muted); }
+        .list-count { font-size: 11px; color: var(--text-muted); margin-left: auto; font-family: var(--mono); }
+
+        /* ══ SOUS-TÂCHES ══ */
+        .subtask-section {
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            margin-bottom: 13px;
+        }
+        .subtask-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 7px 11px;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+        }
+        .subtask-header-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.07em;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+        .subtask-list { padding: 6px 0; }
+        .subtask-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 5px 11px;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .subtask-item:last-child { border-bottom: none; }
+        .subtask-check {
+            width: 14px; height: 14px;
+            border-radius: 3px;
+            border: 1px solid var(--border);
+            cursor: pointer;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            transition: all 0.1s;
+            background: transparent;
+        }
+        .subtask-check.done { background: var(--success); border-color: var(--success); color: white; }
+        .subtask-name-inp {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-soft);
+            font-size: 12px;
+            font-family: var(--font);
+            outline: none;
+        }
+        .subtask-name-inp.done { text-decoration: line-through; color: var(--text-muted); }
+        .subtask-del {
+            background: none; border: none; color: var(--text-muted);
+            cursor: pointer; font-size: 14px; padding: 0; line-height: 1;
+            opacity: 0; transition: opacity 0.1s;
+        }
+        .subtask-item:hover .subtask-del { opacity: 1; }
+        .subtask-del:hover { color: var(--danger); }
+        .subtask-progress-text { font-size: 10px; color: var(--text-muted); font-family: var(--mono); }
+        /* Mini progress bar on task-bar for subtasks */
+        .task-bar-subtask-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: rgba(255,255,255,0.7);
+            position: absolute;
+            bottom: 3px; right: 20px;
+            font-size: 8px;
+        }
+
+        /* ══ NOTIFICATIONS ══ */
+        .notif-bell {
+            background: none;
+            border: 1px solid var(--border);
+            color: var(--text-muted);
+            padding: 5px 10px;
+            border-radius: var(--radius-sm);
+            cursor: pointer;
+            font-size: 14px;
+            position: relative;
+            transition: all 0.12s;
+        }
+        .notif-bell:hover { border-color: var(--text-muted); color: var(--text); }
+        .notif-bell.has-notifs { border-color: var(--warning); color: var(--warning); }
+        .notif-badge {
+            position: absolute;
+            top: -4px; right: -4px;
+            background: var(--warning);
+            color: #000;
+            font-size: 9px;
+            font-weight: 700;
+            width: 16px; height: 16px;
+            border-radius: 50%;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-family: var(--mono);
+        }
+        .notif-bell.has-notifs .notif-badge { display: flex; }
+
+        .notif-panel {
+            position: fixed;
+            top: 56px; right: 12px;
+            width: 340px;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+            z-index: 1500;
+            display: none;
+            flex-direction: column;
+            max-height: 420px;
+            animation: qaFadeIn 0.15s ease;
+        }
+        .notif-panel.open { display: flex; }
+        .notif-panel-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 12px 16px;
+            border-bottom: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .notif-panel-title { font-size: 12px; font-weight: 600; color: var(--text); }
+        .notif-panel-clear {
+            font-size: 11px; color: var(--text-muted); background: none;
+            border: none; cursor: pointer; transition: color 0.1s;
+        }
+        .notif-panel-clear:hover { color: var(--danger); }
+        .notif-list { overflow-y: auto; flex: 1; }
+        .notif-empty { padding: 24px; text-align: center; font-size: 12px; color: var(--text-muted); }
+        .notif-item {
+            display: flex;
+            gap: 10px;
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border-subtle);
+            cursor: pointer;
+            transition: background 0.1s;
+        }
+        .notif-item:hover { background: rgba(255,255,255,0.02); }
+        .notif-item.unread { background: var(--accent-glow); }
+        .notif-icon { font-size: 16px; flex-shrink: 0; line-height: 1.4; }
+        .notif-content { flex: 1; min-width: 0; }
+        .notif-text { font-size: 12px; color: var(--text-soft); line-height: 1.4; }
+        .notif-text strong { color: var(--text); }
+        .notif-time { font-size: 10px; color: var(--text-muted); margin-top: 2px; font-family: var(--mono); }
+        .notif-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); flex-shrink: 0; align-self: center; }
+        .notif-item:not(.unread) .notif-dot { opacity: 0; }
+
         /* Inline add input */
         .backlog-add-row {
             display: none;
@@ -3609,11 +3954,13 @@
     <span id="syncStatus" class="sync-status" title="État de la synchronisation Firebase"></span>
     <div id="onlineUsers" class="online-users" title="Utilisateurs connectés"></div>
     <button class="theme-btn" id="btnTheme" style="margin-left:auto" title="Basculer clair/sombre">🌙</button>
+    <button class="notif-bell nav-btn" id="btnNotif" title="Notifications">🔔<span class="notif-badge" id="notifBadge">0</span></button>
 </div>
 
 <div class="tab-bar">
     <button class="tab-btn active" id="tabGantt" data-tab="gantt">Gantt</button>
     <button class="tab-btn" id="tabDashboard" data-tab="dashboard">Dashboard</button>
+    <button class="tab-btn" id="tabList" data-tab="list">📋 Liste</button>
     <div style="flex:1"></div>
     <!-- Gantt-only controls -->
     <div id="ganttControls" style="display:flex;align-items:center;gap:6px;">
@@ -3715,7 +4062,9 @@
         <span class="backlog-toggle-icon">▼</span>
         <span class="backlog-title">File d'attente</span>
         <span class="backlog-count" id="backlogCount">0</span>
-        <button class="backlog-add-btn" id="backlogAddBtn" title="Ajouter une tâche en attente">+ Ajouter</button>
+        <input class="backlog-search" id="backlogSearch" type="text" placeholder="🔍 Rechercher…" autocomplete="off">
+        <button class="backlog-export-btn" id="backlogExportCSV" title="Exporter la file en CSV">↓ CSV</button>
+        <button class="backlog-add-btn" id="backlogAddBtn" title="Ajouter une tâche en attente (B)">+ Ajouter</button>
     </div>
     <div class="backlog-body">
         <div class="backlog-chips" id="backlogChips">
@@ -3728,10 +4077,63 @@
     </div>
 </div>
 
+<!-- ══ BACKLOG NOTE MODAL ══ -->
+<div class="backlog-note-overlay" id="backlogNoteOverlay">
+    <div class="backlog-note-modal">
+        <h3 id="backlogNoteTitle">Note — tâche</h3>
+        <textarea id="backlogNoteText" placeholder="Contexte, blocage, décision attendue…"></textarea>
+        <div class="backlog-note-actions">
+            <button class="btn-ghost" id="backlogNoteCancel">Annuler</button>
+            <button class="btn-primary" id="backlogNoteSave">Enregistrer</button>
+        </div>
+    </div>
+</div>
+
 </div> <!-- end viewGantt -->
 
 <div class="view dashboard-view" id="viewDashboard">
     <div id="dashboardBody" style="display:flex;flex-direction:column;gap:24px;max-width:1200px;width:100%;margin:0 auto;"></div>
+</div>
+
+<!-- ══ LIST VIEW ══ -->
+<div class="view" id="viewList" style="display:none;flex-direction:column;overflow:hidden;flex:1">
+    <div class="list-view">
+        <div class="list-filters">
+            <input class="list-search" id="listSearch" type="text" placeholder="🔍 Rechercher une tâche ou une ligne…">
+            <button class="filter-chip active" id="listFilterAll" data-lf="all">Toutes</button>
+            <button class="filter-chip" id="listFilterTodo" data-lf="todo">○ À faire</button>
+            <button class="filter-chip" id="listFilterProgress" data-lf="in_progress">◑ En cours</button>
+            <button class="filter-chip" id="listFilterDone" data-lf="done">● Terminées</button>
+            <button class="filter-chip" id="listFilterLate" data-lf="late">⚠ En retard</button>
+            <span class="list-count" id="listCount">0 tâches</span>
+        </div>
+        <table class="list-table" id="listTable">
+            <thead>
+                <tr>
+                    <th data-col="name">Tâche <span class="sort-icon">↕</span></th>
+                    <th data-col="row">Ligne <span class="sort-icon">↕</span></th>
+                    <th data-col="start">Début <span class="sort-icon">↕</span></th>
+                    <th data-col="end">Fin <span class="sort-icon">↕</span></th>
+                    <th data-col="duration">Durée <span class="sort-icon">↕</span></th>
+                    <th data-col="progress">Avancement <span class="sort-icon">↕</span></th>
+                    <th data-col="status">Statut <span class="sort-icon">↕</span></th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody id="listBody"></tbody>
+        </table>
+    </div>
+</div>
+
+<!-- ══ NOTIFICATION PANEL ══ -->
+<div class="notif-panel" id="notifPanel">
+    <div class="notif-panel-header">
+        <span class="notif-panel-title">🔔 Notifications</span>
+        <button class="notif-panel-clear" id="notifClear">Tout effacer</button>
+    </div>
+    <div class="notif-list" id="notifList">
+        <div class="notif-empty">Aucune notification</div>
+    </div>
 </div>
 
 <!-- Modal — 2-level structure -->
@@ -3809,6 +4211,17 @@
                 </div>
                 <div class="progress-bar-preview">
                     <div class="progress-bar-preview-fill" id="mProgressFill" style="width:0%"></div>
+                </div>
+            </div>
+
+            <!-- ── SOUS-TÂCHES ── -->
+            <div class="subtask-section">
+                <div class="subtask-header">
+                    <span class="subtask-header-title">Sous-tâches <span id="mSubtaskProgress" style="font-weight:400;color:var(--text-muted)"></span></span>
+                    <button class="obj-add-btn" id="mSubtaskAdd">+ Ajouter</button>
+                </div>
+                <div class="subtask-list" id="mSubtaskList">
+                    <div style="padding:8px 11px;font-size:11px;color:var(--text-muted);font-style:italic">Aucune sous-tâche</div>
                 </div>
             </div>
 
@@ -4526,7 +4939,11 @@ function buildRowDiv(row, colW, trackW, isChild) {
     qaBtn.title = 'Création rapide de tâche';
     qaBtn.addEventListener('click', e => { e.stopPropagation(); openQuickAdd(row.id, qaBtn); });
 
-    lbl.append(dot, inp, qaBtn, del);
+    const backlogBadge = document.createElement('span');
+    backlogBadge.className = 'row-backlog-badge';
+    backlogBadge.dataset.rowBadgeId = row.id;
+
+    lbl.append(dot, inp, backlogBadge, qaBtn, del);
 
     // Track
     const track = document.createElement('div');
@@ -7855,6 +8272,9 @@ function applyRemoteData(data, isInitialLoad = false) {
     groups          = data.groups          || [];
     milestones      = data.milestones      || [];
     backlog         = Array.isArray(data.backlog) ? data.backlog : [];
+    backlogIdCounter = backlog.length > 0
+        ? Math.max(backlogIdCounter, ...backlog.map(b => (b.id ?? 0) + 1))
+        : backlogIdCounter;
     taskIdCounter   = Math.max(taskIdCounter,   data.taskIdCounter   || 0);
     groupIdCounter  = Math.max(groupIdCounter,  data.groupIdCounter  || 3);
     msIdCounter     = Math.max(msIdCounter,     data.msIdCounter     || 0);
@@ -8842,44 +9262,65 @@ document.addEventListener('keydown', e => {
 });
 // ─── BACKLOG (FILE D'ATTENTE) ─────────────────────────────────────────────────
 
-// ── Rendu ──
+let _backlogDragReorderIdx = null;
+
 function renderBacklog() {
     const chips   = document.getElementById('backlogChips');
     const empty   = document.getElementById('backlogEmpty');
     const counter = document.getElementById('backlogCount');
     if (!chips) return;
 
-    // Update counter badge
+    const search = (document.getElementById('backlogSearch')?.value || '').toLowerCase();
+    const filtered = backlog.filter(b => !search || b.name.toLowerCase().includes(search));
+
     counter.textContent = backlog.length;
     counter.className   = 'backlog-count' + (backlog.length > 0 ? ' has-items' : '');
 
-    // Remove existing chips (keep empty placeholder)
     chips.querySelectorAll('.backlog-chip').forEach(c => c.remove());
-    empty.style.display = backlog.length === 0 ? '' : 'none';
+    empty.style.display = filtered.length === 0 ? '' : 'none';
 
-    backlog.forEach(item => {
+    filtered.forEach((item, fi) => {
+        const realIdx = backlog.indexOf(item);
         const chip = document.createElement('div');
-        chip.className       = 'backlog-chip';
-        chip.dataset.backlogId = item.id;
-        chip.draggable       = true;
-        chip.title           = 'Glisser sur une ligne pour planifier, ou cliquer sur ✏';
+        chip.className = 'backlog-chip';
+        chip.dataset.backlogId  = item.id;
+        chip.dataset.backlogIdx = realIdx;
+        chip.draggable = true;
+        chip.title = item.note ? item.note : 'Glisser sur une ligne pour planifier';
+
+        const handle = document.createElement('span');
+        handle.className   = 'backlog-chip-drag-handle';
+        handle.textContent = '⠿';
+        handle.title       = 'Réordonner';
 
         const dot = document.createElement('span');
-        dot.className      = 'backlog-chip-dot';
+        dot.className        = 'backlog-chip-dot';
         dot.style.background = item.color;
 
         const name = document.createElement('span');
         name.className   = 'backlog-chip-name';
         name.textContent = item.name;
 
-        // Plan button (opens modal)
+        // Note dot
+        if (item.note) {
+            const nd = document.createElement('span');
+            nd.className = 'backlog-chip-note-dot';
+            nd.title     = item.note;
+            chip.appendChild(nd);
+        }
+
+        const noteBtn = document.createElement('button');
+        noteBtn.className   = 'backlog-chip-plan';
+        noteBtn.title       = item.note ? 'Modifier la note' : 'Ajouter une note';
+        noteBtn.textContent = '📝';
+        noteBtn.addEventListener('click', e => { e.stopPropagation(); openBacklogNote(item.id); });
+
         const planBtn = document.createElement('button');
         planBtn.className   = 'backlog-chip-plan';
         planBtn.title       = 'Planifier cette tâche';
         planBtn.textContent = '✏';
         planBtn.addEventListener('click', e => { e.stopPropagation(); openBacklogModal(item.id); });
 
-        // Delete button
         const delBtn = document.createElement('button');
         delBtn.className   = 'backlog-chip-del';
         delBtn.title       = 'Supprimer de la file';
@@ -8891,46 +9332,128 @@ function renderBacklog() {
             saveToStorage();
         });
 
-        chip.append(dot, name, planBtn, delBtn);
+        chip.append(handle, dot, name, noteBtn, planBtn, delBtn);
 
-        // ── Drag from backlog ──
+        // ── Drag from backlog to gantt ──
         chip.addEventListener('dragstart', e => {
             e.dataTransfer.effectAllowed = 'move';
             e.dataTransfer.setData('text/backlog-id', item.id);
             chip.classList.add('dragging-chip');
-            // Show ghost
-            const ghost = document.getElementById('backlogDragGhost');
-            if (ghost) {
-                ghost.querySelector('.bdg-dot').style.background = item.color;
-                ghost.querySelector('.bdg-name').textContent     = item.name;
-            }
-            // Highlight all gantt rows as drop targets
             document.querySelectorAll('.gantt-row').forEach(r => r.classList.add('backlog-drop-target'));
         });
         chip.addEventListener('dragend', () => {
             chip.classList.remove('dragging-chip');
             document.querySelectorAll('.gantt-row').forEach(r => r.classList.remove('backlog-drop-target'));
+            chips.querySelectorAll('.backlog-chip').forEach(c => { c.classList.remove('drag-over-top'); c.classList.remove('drag-over-bottom'); });
+        });
+
+        // ── Drag reorder within backlog ──
+        handle.addEventListener('mousedown', () => { chip.draggable = true; });
+        chip.addEventListener('dragover', e => {
+            if (!e.dataTransfer.types.includes('text/backlog-id')) return;
+            e.preventDefault();
+            const rect = chip.getBoundingClientRect();
+            const mid  = rect.top + rect.height / 2;
+            chips.querySelectorAll('.backlog-chip').forEach(c => { c.classList.remove('drag-over-top'); c.classList.remove('drag-over-bottom'); });
+            chip.classList.add(e.clientY < mid ? 'drag-over-top' : 'drag-over-bottom');
+        });
+        chip.addEventListener('drop', e => {
+            const srcId = parseInt(e.dataTransfer.getData('text/backlog-id'));
+            if (isNaN(srcId) || srcId === item.id) return;
+            const srcIdx  = backlog.findIndex(b => b.id === srcId);
+            const destIdx = backlog.findIndex(b => b.id === item.id);
+            if (srcIdx === -1 || destIdx === -1) return;
+            e.stopPropagation();
+            const [moved] = backlog.splice(srcIdx, 1);
+            const rect = chip.getBoundingClientRect();
+            const insertAfter = e.clientY >= rect.top + rect.height / 2;
+            const newIdx = backlog.findIndex(b => b.id === item.id);
+            backlog.splice(insertAfter ? newIdx + 1 : newIdx, 0, moved);
+            renderBacklog();
+            saveToStorage();
         });
 
         chips.appendChild(chip);
     });
+
+    // Update row badges
+    updateRowBacklogBadges();
 }
 
-// ── Ajouter au backlog ──
+function updateRowBacklogBadges() {
+    // Just hide all badges since backlog items are now floating (no row association)
+    document.querySelectorAll('.row-backlog-badge').forEach(b => {
+        b.classList.remove('visible');
+        b.textContent = '';
+    });
+    // Show global badge count on the backlog panel itself (already done via counter)
+}
+
 function addToBacklog(name) {
     if (!name.trim()) return;
     const color = TASK_COLORS[backlog.length % TASK_COLORS.length];
-    backlog.push({ id: backlogIdCounter++, name: name.trim(), color, createdBy: _cachedClientId || null });
+    backlog.push({ id: backlogIdCounter++, name: name.trim(), color, note: '', createdBy: _cachedClientId || null });
     renderBacklog();
     saveToStorage();
+    addNotification('📋', `Tâche <strong>${name.trim()}</strong> ajoutée à la file d'attente`);
 }
+
+// ── Note sur tâche backlog ──
+let _backlogNoteEditId = null;
+function openBacklogNote(backlogId) {
+    const item = backlog.find(b => b.id === backlogId);
+    if (!item) return;
+    _backlogNoteEditId = backlogId;
+    document.getElementById('backlogNoteTitle').textContent = 'Note — ' + item.name;
+    document.getElementById('backlogNoteText').value = item.note || '';
+    document.getElementById('backlogNoteOverlay').classList.add('open');
+    setTimeout(() => document.getElementById('backlogNoteText').focus(), 30);
+}
+document.getElementById('backlogNoteCancel').addEventListener('click', () => {
+    document.getElementById('backlogNoteOverlay').classList.remove('open');
+    _backlogNoteEditId = null;
+});
+document.getElementById('backlogNoteSave').addEventListener('click', () => {
+    const item = backlog.find(b => b.id === _backlogNoteEditId);
+    if (item) { item.note = document.getElementById('backlogNoteText').value.trim(); }
+    document.getElementById('backlogNoteOverlay').classList.remove('open');
+    _backlogNoteEditId = null;
+    renderBacklog();
+    saveToStorage();
+});
+
+// ── Export CSV ──
+document.getElementById('backlogExportCSV').addEventListener('click', e => {
+    e.stopPropagation();
+    if (backlog.length === 0) { showToast('⚠ La file d\'attente est vide', true); return; }
+    const rows_csv = [['Nom', 'Note', 'Créé par']];
+    backlog.forEach(b => {
+        rows_csv.push([
+            '"' + (b.name || '').replace(/"/g, '""') + '"',
+            '"' + (b.note || '').replace(/"/g, '""') + '"',
+            '"' + (b.createdBy || '') + '"'
+        ]);
+    });
+    const csv  = rows_csv.map(r => r.join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href     = url;
+    a.download = 'file_attente_' + new Date().toISOString().slice(0,10) + '.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+    showToast('✅ CSV exporté');
+});
+
+// ── Recherche dans le backlog ──
+document.getElementById('backlogSearch').addEventListener('input', () => renderBacklog());
+document.getElementById('backlogSearch').addEventListener('click', e => e.stopPropagation());
 
 // ── Ouvrir le modal pour planifier une tâche du backlog ──
 function openBacklogModal(backlogId) {
     const item = backlog.find(b => b.id === backlogId);
     if (!item) return;
 
-    // Populate row selector
     const sel = document.getElementById('mRowSelect');
     sel.innerHTML = '<option value="">— Choisir une ligne —</option>';
     rows.forEach(r => {
@@ -8941,31 +9464,31 @@ function openBacklogModal(backlogId) {
     });
     document.getElementById('mRowSelectField').style.display = '';
 
-    // Default dates: today → today + 7j
     const sd = new Date(today);
     const ed = new Date(today); ed.setDate(ed.getDate() + 7);
 
-    // Fake rowId = null for now (will be resolved on save)
     modalState = { rowId: null, editTaskId: null, fromBacklogId: backlogId };
     selectedColor = item.color;
     modalObjectives = [];
+    modalSubtasks = [];
 
-    document.getElementById('mTitle').textContent     = '📋 Planifier la tâche';
-    document.getElementById('mTaskName').value        = item.name;
-    document.getElementById('mStartDate').value       = toYMD(sd);
-    document.getElementById('mEndDate').value         = toYMD(ed);
-    document.getElementById('mTjm').value             = '';
-    document.getElementById('mEtp').value             = '';
-    document.getElementById('mProgress').value        = 0;
+    document.getElementById('mTitle').textContent      = '📋 Planifier la tâche';
+    document.getElementById('mTaskName').value         = item.name;
+    document.getElementById('mStartDate').value        = toYMD(sd);
+    document.getElementById('mEndDate').value          = toYMD(ed);
+    document.getElementById('mTjm').value              = '';
+    document.getElementById('mEtp').value              = '';
+    document.getElementById('mProgress').value         = 0;
     document.getElementById('mProgressVal').textContent = '0%';
     document.getElementById('mProgressFill').style.width = '0%';
-    document.getElementById('mNotes').value           = '';
-    document.getElementById('mMetier').value          = '';
+    document.getElementById('mNotes').value            = item.note || '';
+    document.getElementById('mMetier').value           = '';
     document.getElementById('mCreatorRow').style.display = 'none';
 
     buildColorPicker();
     buildStatusSelector(null);
     buildObjList();
+    buildSubtaskList();
     setObjToggle(false);
     setAdvancedOpen(false);
     updateModalPreview();
@@ -8975,10 +9498,9 @@ function openBacklogModal(backlogId) {
 }
 
 // ── Patch du bouton Enregistrer pour gérer le cas backlog ──
-// On wraps the existing mCreate listener with backlog logic
 const _origMCreate = document.getElementById('mCreate');
 _origMCreate.addEventListener('click', () => {
-    if (!modalState.fromBacklogId) return; // handled by original listener
+    if (!modalState.fromBacklogId) return;
 
     const name  = document.getElementById('mTaskName').value.trim() || 'Tâche';
     const start = document.getElementById('mStartDate').value;
@@ -9009,21 +9531,21 @@ _origMCreate.addEventListener('click', () => {
 
     pushUndo();
 
-    const tjm      = parseFloat(document.getElementById('mTjm').value)      || 0;
-    const etp      = parseFloat(document.getElementById('mEtp').value)      || 0;
-    const progress = parseInt(document.getElementById('mProgress').value)   || 0;
-    const notes    = document.getElementById('mNotes').value.trim()         || null;
-    const metier   = document.getElementById('mMetier').value.trim()        || null;
+    const tjm      = parseFloat(document.getElementById('mTjm').value)    || 0;
+    const etp      = parseFloat(document.getElementById('mEtp').value)    || 0;
+    const progress = parseInt(document.getElementById('mProgress').value) || 0;
+    const notes    = document.getElementById('mNotes').value.trim()       || null;
+    const metier   = document.getElementById('mMetier').value.trim()      || null;
     const batiments= [...(document.getElementById('mBatimentInput')._modalBats || [])];
 
     row.tasks.push({
         id: taskIdCounter++, name, start, end, color: selectedColor,
         tjm, etp, progress, status: selectedStatus || null,
         notes, metier, batiments, objectives: [],
+        subtasks: modalSubtasks.map(s => ({...s})),
         createdBy: _cachedClientId || null
     });
 
-    // Remove from backlog
     backlog = backlog.filter(b => b.id !== modalState.fromBacklogId);
     modalState.fromBacklogId = null;
     document.getElementById('mRowSelectField').style.display = 'none';
@@ -9034,9 +9556,9 @@ _origMCreate.addEventListener('click', () => {
     closeModal();
     saveToStorage();
     showToast('✅ Tâche planifiée depuis la file d\'attente');
-}, true); // capture = true so it runs before the original
+    addNotification('📅', `<strong>${name}</strong> planifiée sur <strong>${row.name || 'la ligne'}</strong>`);
+}, true);
 
-// Hide row selector when modal closes normally
 const _origCloseModal = closeModal;
 closeModal = function() {
     _origCloseModal();
@@ -9065,14 +9587,12 @@ document.addEventListener('drop', e => {
     const item  = backlog.find(b => b.id === backlogId);
     if (!row || !item) return;
 
-    // Calculate drop date from cursor position on the track
     const track = rowEl.querySelector('.row-track');
     if (!track) return;
-    const rect   = track.getBoundingClientRect();
-    const pct    = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+    const rect  = track.getBoundingClientRect();
+    const pct   = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
     const clickDate = pctToDate(pct);
 
-    // Duration by zoom (same logic as click-to-create)
     let sd, ed;
     if (zoom === 'currentweek' || zoom === 'week') { sd = snapDay(clickDate);   ed = addDays(sd, 1); }
     else if (zoom === 'month')                     { sd = snapWeek(clickDate);  ed = addDays(sd, 7); }
@@ -9085,13 +9605,12 @@ document.addEventListener('drop', e => {
 
     pushUndo();
     row.tasks.push({
-        id: taskIdCounter++,
-        name: item.name,
-        start: toYMD(slot.start),
-        end:   toYMD(slot.end),
+        id: taskIdCounter++, name: item.name,
+        start: toYMD(slot.start), end: toYMD(slot.end),
         color: item.color,
         etp: 0, tjm: 0, progress: 0,
-        status: null, notes: null, metier: null, batiments: [], objectives: [],
+        status: null, notes: item.note || null, metier: null, batiments: [], objectives: [],
+        subtasks: [],
         createdBy: _cachedClientId || null
     });
 
@@ -9099,9 +9618,9 @@ document.addEventListener('drop', e => {
     render();
     saveToStorage();
     showToast('✅ "' + item.name + '" planifiée sur ' + (row.name || 'la ligne'));
+    addNotification('📅', `<strong>${item.name}</strong> planifiée sur <strong>${row.name || 'la ligne'}</strong>`);
 });
 
-// ── Ghost drag (visuel sous le curseur) ──
 (function() {
     const ghost = document.createElement('div');
     ghost.id        = 'backlogDragGhost';
@@ -9111,13 +9630,11 @@ document.addEventListener('drop', e => {
     document.body.appendChild(ghost);
 })();
 
-// ── Toggle du panneau ──
 document.getElementById('backlogHeader').addEventListener('click', e => {
-    if (e.target.closest('#backlogAddBtn')) return;
+    if (e.target.closest('#backlogAddBtn') || e.target.closest('#backlogSearch') || e.target.closest('#backlogExportCSV')) return;
     document.getElementById('backlogPanel').classList.toggle('open');
 });
 
-// ── Bouton "+ Ajouter" ──
 document.getElementById('backlogAddBtn').addEventListener('click', e => {
     e.stopPropagation();
     const panel = document.getElementById('backlogPanel');
@@ -9127,7 +9644,6 @@ document.getElementById('backlogAddBtn').addEventListener('click', e => {
     setTimeout(() => document.getElementById('backlogInlineInput').focus(), 30);
 });
 
-// ── Confirmer l'ajout inline ──
 function confirmBacklogAdd() {
     const inp = document.getElementById('backlogInlineInput');
     const val = inp.value.trim();
@@ -9144,6 +9660,362 @@ document.getElementById('backlogInlineInput').addEventListener('keydown', e => {
         document.getElementById('backlogAddRow').classList.remove('visible');
     }
 });
+
+// ─── SOUS-TÂCHES ──────────────────────────────────────────────────────────────
+
+let modalSubtasks = []; // working copy while modal is open
+
+function buildSubtaskList() {
+    const container = document.getElementById('mSubtaskList');
+    const progEl    = document.getElementById('mSubtaskProgress');
+    if (!container) return;
+
+    if (modalSubtasks.length === 0) {
+        container.innerHTML = '<div style="padding:8px 11px;font-size:11px;color:var(--text-muted);font-style:italic">Aucune sous-tâche</div>';
+        if (progEl) progEl.textContent = '';
+        return;
+    }
+
+    const done  = modalSubtasks.filter(s => s.done).length;
+    if (progEl) progEl.textContent = `${done}/${modalSubtasks.length}`;
+
+    container.innerHTML = '';
+    modalSubtasks.forEach((st, i) => {
+        const item = document.createElement('div');
+        item.className = 'subtask-item';
+
+        const check = document.createElement('div');
+        check.className = 'subtask-check' + (st.done ? ' done' : '');
+        check.textContent = st.done ? '✓' : '';
+        check.addEventListener('click', () => {
+            modalSubtasks[i].done = !modalSubtasks[i].done;
+            buildSubtaskList();
+        });
+
+        const inp = document.createElement('input');
+        inp.className = 'subtask-name-inp' + (st.done ? ' done' : '');
+        inp.type = 'text';
+        inp.value = st.name;
+        inp.placeholder = 'Nom de la sous-tâche…';
+        inp.addEventListener('input', e => { modalSubtasks[i].name = e.target.value; });
+        inp.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                modalSubtasks.splice(i + 1, 0, { id: Date.now() + Math.random(), name: '', done: false });
+                buildSubtaskList();
+                setTimeout(() => {
+                    const inputs = container.querySelectorAll('.subtask-name-inp');
+                    if (inputs[i + 1]) inputs[i + 1].focus();
+                }, 20);
+            }
+            if (e.key === 'Backspace' && !inp.value) {
+                e.preventDefault();
+                modalSubtasks.splice(i, 1);
+                buildSubtaskList();
+                setTimeout(() => {
+                    const inputs = container.querySelectorAll('.subtask-name-inp');
+                    if (inputs[i - 1]) inputs[i - 1].focus();
+                }, 20);
+            }
+        });
+
+        const del = document.createElement('button');
+        del.className = 'subtask-del';
+        del.textContent = '×';
+        del.addEventListener('click', () => { modalSubtasks.splice(i, 1); buildSubtaskList(); });
+
+        item.append(check, inp, del);
+        container.appendChild(item);
+    });
+}
+
+document.getElementById('mSubtaskAdd').addEventListener('click', () => {
+    modalSubtasks.push({ id: Date.now() + Math.random(), name: '', done: false });
+    buildSubtaskList();
+    setTimeout(() => {
+        const inputs = document.querySelectorAll('.subtask-name-inp');
+        if (inputs.length) inputs[inputs.length - 1].focus();
+    }, 30);
+});
+
+// Patch openModal to load subtasks
+const _origOpenModal = openModal;
+openModal = function(rowId, sd, ed, taskId = null) {
+    _origOpenModal(rowId, sd, ed, taskId);
+    const row  = rows.find(r => r.id === rowId);
+    const task = taskId !== null ? row?.tasks.find(t => t.id === taskId) : null;
+    modalSubtasks = task?.subtasks ? JSON.parse(JSON.stringify(task.subtasks)) : [];
+    buildSubtaskList();
+};
+
+// Patch mCreate save to include subtasks
+document.getElementById('mCreate').addEventListener('click', () => {
+    if (modalState.fromBacklogId) return; // handled by backlog listener
+    setTimeout(() => {
+        const row = rows.find(r => r.id === modalState.rowId);
+        if (!row) return;
+        const task = modalState.editTaskId !== null
+            ? row.tasks.find(t => t.id === modalState.editTaskId)
+            : row.tasks[row.tasks.length - 1];
+        if (task) {
+            task.subtasks = modalSubtasks.map(s => ({...s}));
+            render();
+            saveToStorage();
+        }
+    }, 60);
+}, false);
+
+// ─── VUE LISTE ───────────────────────────────────────────────────────────────
+
+let listSortCol = 'start';
+let listSortAsc = true;
+let listFilter  = 'all';
+
+function renderListView() {
+    const search = (document.getElementById('listSearch')?.value || '').toLowerCase();
+    const body   = document.getElementById('listBody');
+    const count  = document.getElementById('listCount');
+    if (!body) return;
+
+    // Flatten all tasks
+    let allTasks = [];
+    rows.forEach(row => {
+        row.tasks.forEach(task => {
+            allTasks.push({ task, row });
+        });
+    });
+
+    // Filter
+    const now = new Date();
+    allTasks = allTasks.filter(({ task, row }) => {
+        if (search && !task.name.toLowerCase().includes(search) && !row.name.toLowerCase().includes(search)) return false;
+        if (listFilter === 'todo')        return task.status === 'todo' || !task.status;
+        if (listFilter === 'in_progress') return task.status === 'in_progress';
+        if (listFilter === 'done')        return task.status === 'done';
+        if (listFilter === 'late')        return new Date(task.end) < now && task.status !== 'done';
+        return true;
+    });
+
+    // Sort
+    allTasks.sort((a, b) => {
+        let va, vb;
+        if (listSortCol === 'name')     { va = a.task.name; vb = b.task.name; }
+        else if (listSortCol === 'row') { va = a.row.name;  vb = b.row.name; }
+        else if (listSortCol === 'start')    { va = a.task.start; vb = b.task.start; }
+        else if (listSortCol === 'end')      { va = a.task.end;   vb = b.task.end; }
+        else if (listSortCol === 'duration') {
+            va = workingDays(a.task.start, a.task.end);
+            vb = workingDays(b.task.start, b.task.end);
+        }
+        else if (listSortCol === 'progress') { va = a.task.progress || 0; vb = b.task.progress || 0; }
+        else if (listSortCol === 'status')   { va = a.task.status || ''; vb = b.task.status || ''; }
+        else { va = ''; vb = ''; }
+        if (va < vb) return listSortAsc ? -1 : 1;
+        if (va > vb) return listSortAsc ?  1 : -1;
+        return 0;
+    });
+
+    count.textContent = allTasks.length + ' tâche' + (allTasks.length !== 1 ? 's' : '');
+
+    body.innerHTML = '';
+    const fmtDate = d => d ? new Date(d).toLocaleDateString('fr-FR', { day:'2-digit', month:'short', year:'numeric' }) : '—';
+    allTasks.forEach(({ task, row }) => {
+        const tr = document.createElement('tr');
+        const isLate = task.end && new Date(task.end) < now && task.status !== 'done';
+        const statusDef = TASK_STATUSES.find(s => s.id === task.status);
+        const prog = task.progress ?? 0;
+        const dur  = (task.start && task.end) ? workingDays(task.start, task.end) : 0;
+
+        tr.innerHTML = `
+            <td>
+                <span class="list-row-color" style="background:${task.color || row.color}"></span>
+                <span class="list-task-name">${task.name}</span>
+                ${task.subtasks?.length ? `<span style="font-size:10px;color:var(--text-muted);margin-left:6px">· ${task.subtasks.filter(s=>s.done).length}/${task.subtasks.length} sous-tâches</span>` : ''}
+            </td>
+            <td><span class="list-row-name">${row.name || '—'}</span></td>
+            <td style="font-family:var(--mono);font-size:11px;${isLate?'color:var(--danger)':''}">${fmtDate(task.start)}</td>
+            <td style="font-family:var(--mono);font-size:11px;${isLate?'color:var(--danger)':''}">${fmtDate(task.end)}${isLate?' ⚠':''}</td>
+            <td style="font-family:var(--mono);font-size:11px;color:var(--text-muted)">${dur}j</td>
+            <td>
+                <div class="list-progress-bar"><div class="list-progress-fill" style="width:${prog}%;background:${prog>=100?'var(--success)':'var(--accent)'}"></div></div>
+                <span style="font-size:11px;font-family:var(--mono);color:var(--text-muted)">${prog}%</span>
+            </td>
+            <td>${statusDef ? `<span class="list-status-pill" style="color:${statusDef.color};border-color:${statusDef.color}33;background:${statusDef.color}11">${statusDef.icon} ${statusDef.label}</span>` : '<span style="color:var(--text-muted);font-size:11px">—</span>'}</td>
+            <td><button class="list-edit-btn" data-tid="${task.id}" data-rid="${row.id}">✏ Éditer</button></td>
+        `;
+        body.appendChild(tr);
+    });
+
+    // Edit buttons
+    body.querySelectorAll('.list-edit-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const tid = parseInt(btn.dataset.tid);
+            const rid = parseInt(btn.dataset.rid);
+            const row = rows.find(r => r.id === rid);
+            const task = row?.tasks.find(t => t.id === tid);
+            if (task && row) {
+                switchTab('gantt');
+                setTimeout(() => openModal(rid, new Date(task.start), new Date(task.end), tid), 100);
+            }
+        });
+    });
+
+    // Sort headers
+    document.querySelectorAll('.list-table th[data-col]').forEach(th => {
+        th.classList.toggle('sorted', th.dataset.col === listSortCol);
+        const icon = th.querySelector('.sort-icon');
+        if (icon) icon.textContent = th.dataset.col === listSortCol ? (listSortAsc ? '↑' : '↓') : '↕';
+    });
+}
+
+// List view controls
+document.getElementById('listSearch')?.addEventListener('input', renderListView);
+document.querySelectorAll('.filter-chip[data-lf]').forEach(btn => {
+    btn.addEventListener('click', () => {
+        listFilter = btn.dataset.lf;
+        document.querySelectorAll('.filter-chip[data-lf]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        renderListView();
+    });
+});
+document.querySelectorAll('.list-table th[data-col]').forEach(th => {
+    th.addEventListener('click', () => {
+        if (listSortCol === th.dataset.col) listSortAsc = !listSortAsc;
+        else { listSortCol = th.dataset.col; listSortAsc = true; }
+        renderListView();
+    });
+});
+
+// ─── NOTIFICATIONS ────────────────────────────────────────────────────────────
+
+let notifications = [];
+let notifIdCounter = 0;
+
+function addNotification(icon, text) {
+    notifications.unshift({ id: notifIdCounter++, icon, text, time: new Date(), read: false });
+    if (notifications.length > 50) notifications.pop();
+    renderNotifications();
+}
+
+function renderNotifications() {
+    const list  = document.getElementById('notifList');
+    const badge = document.getElementById('notifBadge');
+    const bell  = document.getElementById('btnNotif');
+    if (!list) return;
+
+    const unread = notifications.filter(n => !n.read).length;
+    badge.textContent = unread;
+    bell.classList.toggle('has-notifs', unread > 0);
+
+    if (notifications.length === 0) {
+        list.innerHTML = '<div class="notif-empty">Aucune notification</div>';
+        return;
+    }
+
+    list.innerHTML = '';
+    notifications.forEach(n => {
+        const item = document.createElement('div');
+        item.className = 'notif-item' + (n.read ? '' : ' unread');
+        const timeAgo = formatTimeAgo(n.time);
+        item.innerHTML = `
+            <span class="notif-icon">${n.icon}</span>
+            <div class="notif-content">
+                <div class="notif-text">${n.text}</div>
+                <div class="notif-time">${timeAgo}</div>
+            </div>
+            <span class="notif-dot"></span>`;
+        item.addEventListener('click', () => { n.read = true; renderNotifications(); });
+        list.appendChild(item);
+    });
+}
+
+function formatTimeAgo(date) {
+    const diff = Math.floor((Date.now() - date.getTime()) / 1000);
+    if (diff < 60)   return 'À l\'instant';
+    if (diff < 3600) return Math.floor(diff / 60) + ' min';
+    if (diff < 86400) return Math.floor(diff / 3600) + 'h';
+    return date.toLocaleDateString('fr-FR');
+}
+
+// Notification bell toggle
+document.getElementById('btnNotif').addEventListener('click', (e) => {
+    e.stopPropagation();
+    const panel = document.getElementById('notifPanel');
+    panel.classList.toggle('open');
+    if (panel.classList.contains('open')) {
+        // Mark all as read after a short delay
+        setTimeout(() => {
+            notifications.forEach(n => n.read = true);
+            renderNotifications();
+        }, 1500);
+    }
+});
+
+document.getElementById('notifClear').addEventListener('click', (e) => {
+    e.stopPropagation();
+    notifications = [];
+    renderNotifications();
+});
+
+document.addEventListener('click', e => {
+    const panel = document.getElementById('notifPanel');
+    if (panel?.classList.contains('open') && !panel.contains(e.target) && e.target.id !== 'btnNotif') {
+        panel.classList.remove('open');
+    }
+});
+
+// Deadline notifications check (run at init + every hour)
+function checkDeadlineNotifications() {
+    const now   = new Date();
+    const soon  = new Date(now); soon.setDate(soon.getDate() + 3);
+    const todayKey = now.toISOString().slice(0, 10);
+    // Dedup: only fire once per task per day (stored in sessionStorage)
+    let fired;
+    try { fired = new Set(JSON.parse(sessionStorage.getItem('notifFired_' + todayKey) || '[]')); }
+    catch(e) { fired = new Set(); }
+
+    rows.forEach(row => {
+        row.tasks.forEach(task => {
+            if (task.status === 'done') return;
+            const key = 'task_' + task.id;
+            if (fired.has(key)) return;
+            const end = new Date(task.end);
+            if (end < now) {
+                addNotification('⚠', `<strong>${task.name}</strong> est en retard (${row.name || 'ligne'})`);
+                fired.add(key);
+            } else if (end <= soon) {
+                const daysLeft = Math.ceil((end - now) / 86400000);
+                addNotification('⏰', `<strong>${task.name}</strong> se termine dans ${daysLeft} jour${daysLeft > 1 ? 's' : ''}`);
+                fired.add(key);
+            }
+        });
+    });
+
+    try { sessionStorage.setItem('notifFired_' + todayKey, JSON.stringify([...fired])); }
+    catch(e) { /* sessionStorage indisponible */ }
+}
+
+// ─── TAB SWITCHING PATCH ─────────────────────────────────────────────────────
+
+const _origSwitchTab = switchTab;
+switchTab = function(tab) {
+    _origSwitchTab(tab);
+    document.getElementById('viewList').style.display = tab === 'list' ? 'flex' : 'none';
+    if (tab === 'list') renderListView();
+};
+
+// ─── RACCOURCI B ─────────────────────────────────────────────────────────────
+
+document.addEventListener('keydown', e => {
+    if (e.key === 'b' && document.activeElement === document.body) {
+        const panel = document.getElementById('backlogPanel');
+        panel.classList.toggle('open');
+        if (panel.classList.contains('open')) {
+            setTimeout(() => document.getElementById('backlogInlineInput') && document.getElementById('backlogAddBtn').click(), 100);
+        }
+    }
+});
+
 
 // ─── QUICK ADD POPOVER ───────────────────────────────────────────────────────
 
@@ -9363,6 +10235,14 @@ document.addEventListener('keydown', e => {
     // Register presence (non-blocking — failures don't affect the app)
     dbg('🔵 [Application] Étape 6/6: Enregistrement de la présence utilisateur');
     await startPresence();
+
+    // Check deadline notifications on load, then every hour
+    setTimeout(() => {
+        if (typeof checkDeadlineNotifications === 'function') checkDeadlineNotifications();
+    }, 2000);
+    setInterval(() => {
+        if (typeof checkDeadlineNotifications === 'function') checkDeadlineNotifications();
+    }, 3600000);
 
     dbg('═══════════════════════════════════════════════════════');
     dbg('✅ [Application] Initialisation terminée avec succès!');
