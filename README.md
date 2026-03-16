@@ -1,6 +1,6 @@
 # Planning Gantt - Application Web
 
-Application de planification Gantt accessible via le web avec stockage localStorage.
+Application de planification Gantt accessible via GitHub Pages avec synchronisation multi-utilisateurs en temps réel.
 
 ## 📋 Description
 
@@ -9,7 +9,168 @@ Cette application de planning Gantt permet de :
 - Organiser les tâches par groupes et métiers
 - Suivre l'avancement, les coûts et les ressources (ETP)
 - Exporter/importer des plannings au format JSON
-- Stocker les données de manière persistante dans le navigateur (localStorage)
+- **Synchroniser les données en temps réel entre plusieurs utilisateurs (via Firebase)**
+
+## 🌐 Accès GitHub Pages
+
+L'application est déployée et accessible directement via GitHub Pages :
+
+**URL : [https://nilujien.github.io/H_DEV/](https://nilujien.github.io/H_DEV/)**
+
+Aucune installation n'est nécessaire ! L'application fonctionne entièrement dans votre navigateur.
+
+### Caractéristiques du déploiement GitHub Pages
+
+- ✅ Application statique (HTML/CSS/JavaScript)
+- ✅ **Synchronisation multi-utilisateurs en temps réel (Firebase Realtime Database)**
+- ✅ Stockage local de secours (localStorage)
+- ✅ Aucun serveur backend requis
+- ✅ Déploiement automatique via GitHub Actions
+- ✅ Accessible publiquement
+
+## 💾 Stockage des Données — Deux modes
+
+### Mode Firebase (recommandé — multi-utilisateurs)
+
+Avec Firebase Realtime Database configuré :
+- Les données sont **partagées entre tous les utilisateurs**
+- Chaque modification est **synchronisée en temps réel**
+- Un indicateur de statut (✅ Synchronisé / 🔴 Hors ligne) est visible dans l'en-tête
+- Voir le guide de configuration : **[FIREBASE_SETUP.md](FIREBASE_SETUP.md)**
+
+### Mode Local (par défaut — mono-utilisateur)
+
+Sans configuration Firebase :
+- Les données sont stockées uniquement dans le `localStorage` du navigateur
+- Chaque utilisateur voit sa propre copie des données
+- Capacité : environ 5-10 MB
+- **Important** : Utilisez "Export JSON" régulièrement pour sauvegarder vos plannings
+
+### Sauvegarde automatique
+
+L'application sauvegarde automatiquement toutes les modifications après un délai de 400 ms (debounced).
+
+## 🔄 Configuration de la synchronisation Firebase
+
+Pour activer la synchronisation multi-utilisateurs, suivez le guide **[FIREBASE_SETUP.md](FIREBASE_SETUP.md)**.
+
+En résumé :
+1. Créez un projet sur [console.firebase.google.com](https://console.firebase.google.com)
+2. Activez **Realtime Database** (région Europe)
+3. Copiez la configuration Firebase dans la section `FIREBASE_CONFIG` de `index.html`
+4. Committez et poussez → le déploiement est automatique
+
+## 📦 Export/Import de Données
+
+### Exporter
+
+1. Cliquez sur "↓ Export" dans l'interface
+2. Un fichier JSON sera téléchargé avec toutes vos données
+
+### Importer
+
+1. Cliquez sur "↑ Import" dans l'interface
+2. Sélectionnez un fichier JSON précédemment exporté
+3. Les données seront chargées et synchronisées
+
+## 🚀 Installation et Démarrage (Développement Local)
+
+### Prérequis
+
+- Node.js (version 14 ou supérieure)
+- npm (généralement installé avec Node.js)
+
+### Étapes d'installation
+
+1. **Installer les dépendances**
+   ```bash
+   npm install
+   ```
+
+2. **Démarrer le serveur**
+   ```bash
+   npm start
+   ```
+
+   Le serveur démarre sur http://localhost:3000
+
+3. **Accéder à l'application**
+
+   Ouvrez votre navigateur et allez sur http://localhost:3000
+
+## 📁 Structure du Projet
+
+```
+H_DEV/
+├── index.html              # Interface utilisateur (contient la config Firebase)
+├── FIREBASE_SETUP.md       # Guide de configuration Firebase
+├── .github/
+│   └── workflows/
+│       └── deploy.yml     # Workflow GitHub Actions pour déploiement
+├── server.js               # Serveur Express (optionnel, pour dev local)
+├── package.json            # Dépendances pour développement local
+├── scripts/
+│   └── init-db.js         # Script d'initialisation DB (optionnel)
+└── .gitignore             # Fichiers à ignorer par Git
+```
+
+## ⚠️ Notes Importantes
+
+### Sauvegarde et backup
+
+- Exportez régulièrement vos plannings (bouton "↓ Export")
+- Sauvegardez les fichiers JSON exportés dans un endroit sûr
+- Firebase conserve vos données même si tous les utilisateurs ferment leurs navigateurs
+
+### Compatibilité navigateur
+
+- Utilisez un navigateur récent (Chrome, Firefox, Safari, Edge)
+- Activez JavaScript
+- Autorisez le localStorage pour le site
+
+## 🛠️ Développement
+
+### Mode développement
+
+```bash
+npm run dev
+```
+
+### Structure du code
+
+- **Frontend** : Vanilla JavaScript dans `index.html` (section `<script>`)
+- **Sync** : Firebase Realtime Database (SDK compat v10 chargé via CDN)
+- **Fallback** : localStorage natif du navigateur
+- **Backend local** : Express.js dans `server.js` (optionnel)
+
+## 🐛 Dépannage
+
+### Les données ne se synchronisent pas entre utilisateurs
+
+→ Firebase n'est peut-être pas configuré. Suivez [FIREBASE_SETUP.md](FIREBASE_SETUP.md).
+
+### Le badge "⚠️ Erreur sync" s'affiche
+
+1. Vérifiez votre connexion internet
+2. Vérifiez les règles de sécurité dans Firebase Console
+3. Ouvrez la console du navigateur (F12) pour plus de détails
+
+### Réinitialiser les données locales
+
+Dans la console du navigateur (F12) :
+```javascript
+localStorage.removeItem('gantt_planning_data');
+location.reload();
+```
+
+## 📄 Licence
+
+ISC
+
+## 👥 Support
+
+Pour toute question ou problème, créez une issue dans le dépôt GitHub.
+
 
 ## 🌐 Accès GitHub Pages
 
