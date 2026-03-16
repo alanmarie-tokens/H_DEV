@@ -5403,8 +5403,8 @@ function wrapMutating(fn) {
     return function(...args) { pushUndo(); return fn.apply(this, args); };
 }
 
-// ─── PERSISTANCE API ────────────────────────────
-const API_BASE = window.location.origin + '/api';
+// ─── PERSISTANCE LOCALSTORAGE ────────────────────────────
+const STORAGE_KEY = 'gantt_planning_data';
 let saveInProgress = false;
 
 async function saveToStorage() {
@@ -5412,31 +5412,22 @@ async function saveToStorage() {
     saveInProgress = true;
 
     try {
-        const response = await fetch(`${API_BASE}/planning`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                version: 2,
-                rows,
-                groups,
-                milestones,
-                taskIdCounter,
-                groupIdCounter,
-                msIdCounter,
-                zoom,
-                viewStart: viewStart.toISOString()
-            })
-        });
+        const data = {
+            version: 2,
+            rows,
+            groups,
+            milestones,
+            taskIdCounter,
+            groupIdCounter,
+            msIdCounter,
+            zoom,
+            viewStart: viewStart.toISOString()
+        };
 
-        if (!response.ok) {
-            throw new Error('Failed to save planning data');
-        }
-
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
         console.log('Planning saved successfully');
     } catch(e) {
-        console.error('Error saving to API:', e);
+        console.error('Error saving to localStorage:', e);
         showToast('❌ Erreur lors de la sauvegarde', true);
     } finally {
         saveInProgress = false;
@@ -5445,12 +5436,10 @@ async function saveToStorage() {
 
 async function loadFromStorage() {
     try {
-        const response = await fetch(`${API_BASE}/planning`);
-        if (!response.ok) {
-            throw new Error('Failed to load planning data');
-        }
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (!stored) return false;
 
-        const d = await response.json();
+        const d = JSON.parse(stored);
         if (!d.rows || !Array.isArray(d.rows)) return false;
 
         rows = d.rows;
@@ -5466,7 +5455,7 @@ async function loadFromStorage() {
         if (d.viewStart) viewStart = new Date(d.viewStart);
         return true;
     } catch(e) {
-        console.error('Error loading from API:', e);
+        console.error('Error loading from localStorage:', e);
         return false;
     }
 }
