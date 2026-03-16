@@ -160,7 +160,104 @@ Le forfait gratuit est largement suffisant pour un usage d'équipe :
 - La configuration Firebase est invalide ou incomplète
 - Vérifiez que tous les champs de `FIREBASE_CONFIG` sont renseignés
 
-### Erreur "PERMISSION_DENIED"
+### Erreur "PERMISSION_DENIED" — Les utilisateurs peuvent voir mais pas sauvegarder
 
-- Les règles de sécurité refusent l'accès
-- Mettez à jour les règles dans Firebase Console → Realtime Database → Règles
+**Symptômes :**
+- ✅ Les utilisateurs voient les modifications en temps réel
+- ❌ Les utilisateurs ne peuvent pas sauvegarder leurs propres modifications
+- Console web affiche : `PERMISSION_DENIED` ou `permission denied`
+- Message toast : `⚠️ Sauvegarde locale OK — Firebase en lecture seule (vérifiez les permissions)`
+
+**Causes possibles :**
+
+1. **Mode test expiré** (30 jours après activation)
+   - Firebase Realtime Database démarre en mode test avec accès ouvert pendant 30 jours
+   - Après expiration, les règles passent automatiquement en mode restreint (lecture seule ou aucun accès)
+
+2. **Règles de sécurité restrictives**
+   - Les règles Firebase ont été modifiées pour interdire l'écriture
+   - Les règles requièrent une authentification qui n'est pas implémentée
+
+3. **Quotas Firebase dépassés** (rare en usage normal)
+   - Le forfait gratuit a atteint ses limites
+
+**Solutions :**
+
+#### Option 1 : Mettre à jour les règles de sécurité (accès ouvert pour équipe interne)
+
+1. Ouvrez [Firebase Console](https://console.firebase.google.com)
+2. Sélectionnez votre projet
+3. Allez dans **Realtime Database** → onglet **Règles**
+4. Remplacez par ces règles (accès ouvert en lecture/écriture) :
+
+```json
+{
+  "rules": {
+    "planning": {
+      ".read": true,
+      ".write": true
+    }
+  }
+}
+```
+
+5. Cliquez sur **Publier**
+6. Rechargez l'application web (F5) et testez la sauvegarde
+
+> ⚠️ **Attention :** Ces règles permettent un accès public. Elles sont adaptées pour une équipe interne ou un usage privé. Ne les utilisez pas si votre application est publique.
+
+#### Option 2 : Règles temporaires pour le développement (mode test prolongé)
+
+Si vous êtes encore en phase de développement, vous pouvez prolonger le mode test :
+
+```json
+{
+  "rules": {
+    ".read": "now < 1735689600000",  // Remplacez par un timestamp futur (ex: +90 jours)
+    ".write": "now < 1735689600000"
+  }
+}
+```
+
+Pour calculer un timestamp futur :
+- Ouvrez la console du navigateur (F12)
+- Tapez : `new Date('2026-12-31').getTime()` (remplacez la date)
+- Copiez le nombre obtenu dans les règles
+
+#### Option 3 : Implémenter Firebase Authentication (production sécurisée)
+
+Pour une application en production avec contrôle d'accès :
+
+1. Activez **Firebase Authentication** dans la console Firebase
+2. Configurez un fournisseur d'authentification (Google, Email/Password, etc.)
+3. Modifiez les règles pour autoriser uniquement les utilisateurs authentifiés :
+
+```json
+{
+  "rules": {
+    "planning": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    }
+  }
+}
+```
+
+4. Ajoutez le code d'authentification dans `index.html` (voir [documentation Firebase Auth](https://firebase.google.com/docs/auth/web/start))
+
+**Vérification après correction :**
+
+1. Ouvrez la console du navigateur (F12) → onglet **Console**
+2. Effectuez une modification dans le planning
+3. Sauvegardez (Ctrl+S ou bouton "💾 Sauvegarder")
+4. Vérifiez les messages dans la console :
+   - ✅ Succès : `✅ [Firebase] Données synchronisées avec succès`
+   - ❌ Échec : `🚫 [Firebase] PERMISSION REFUSÉE` (voir les détails dans la console)
+
+**Diagnostic automatique :**
+
+L'application affiche maintenant des messages détaillés dans la console web pour diagnostiquer les problèmes de permissions Firebase. En cas d'erreur PERMISSION_DENIED, vous verrez :
+- Le code d'erreur exact
+- Les causes possibles
+- L'URL directe vers les règles Firebase de votre projet
+- Les actions recommandées
