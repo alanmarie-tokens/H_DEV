@@ -1,0 +1,11 @@
+.panel {
+  border-top: 1px solid var(--border);
+  background: var(--surface2);
+  flex-shrink: 0;
+  padding: 4px 0;
+}
+
+.canvas {
+  width: 100%;
+  display: block;
+}

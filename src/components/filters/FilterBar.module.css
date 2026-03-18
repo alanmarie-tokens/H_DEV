@@ -1,0 +1,45 @@
+.bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  flex-wrap: wrap;
+}
+
+.search {
+  padding: 6px 10px;
+  background: var(--surface3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+  min-width: 180px;
+}
+.search:focus { border-color: var(--accent); }
+
+.chips { display: flex; gap: 4px; }
+
+.chip {
+  padding: 4px 9px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.chip:hover { color: var(--text); border-color: var(--text-muted); }
+.chipActive { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+
+.resetBtn {
+  margin-left: auto;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--text-muted);
+  transition: all 0.15s;
+}
+.resetBtn:hover { color: var(--danger); }

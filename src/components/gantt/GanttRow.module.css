@@ -1,0 +1,46 @@
+.row {
+  display: flex;
+  height: var(--row-h);
+  border-bottom: 1px solid var(--border-subtle);
+  position: relative;
+}
+
+.row:hover { background: rgba(255,255,255,0.015); }
+
+.labelCell {
+  flex-shrink: 0;
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  background: var(--surface);
+  border-right: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+}
+
+.recapCell {
+  flex-shrink: 0;
+  position: sticky;
+  right: 0;
+  z-index: 10;
+  background: var(--surface);
+  border-left: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: center;
+  padding: 0 10px;
+  gap: 2px;
+}
+
+.recapEtp {
+  font-size: 11px;
+  color: var(--text-soft);
+  font-family: var(--mono);
+}
+
+.recapCost {
+  font-size: 10px;
+  color: var(--text-muted);
+  font-family: var(--mono);
+}

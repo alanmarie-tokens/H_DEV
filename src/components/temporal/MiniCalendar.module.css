@@ -1,0 +1,53 @@
+.cal { min-width: 200px; }
+
+.yearNav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.yearBtn {
+  width: 28px;
+  height: 28px;
+  border-radius: var(--radius-sm);
+  font-size: 16px;
+  color: var(--text-soft);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s;
+}
+.yearBtn:hover { background: var(--surface3); color: var(--text); }
+
+.yearLabel {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.month {
+  padding: 7px 4px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--text-soft);
+  text-align: center;
+  transition: all 0.15s;
+}
+.month:hover { background: var(--surface3); color: var(--text); }
+
+.monthSelected {
+  background: var(--accent-dim);
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.monthToday {
+  border: 1px solid var(--border);
+}

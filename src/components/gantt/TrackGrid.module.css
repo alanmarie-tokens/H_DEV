@@ -1,0 +1,20 @@
+.grid {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  pointer-events: none;
+}
+
+.band { height: 100%; }
+.bandEven { background: transparent; }
+.bandOdd  { background: rgba(255,255,255,0.008); }
+.bandCurrent { background: var(--accent-glow); }
+
+.colHighlight {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+}
+
+.colWeekend { background: rgba(255,255,255,0.02); }
+.colToday   { background: var(--accent-glow); }
