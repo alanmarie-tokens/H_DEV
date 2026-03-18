@@ -1,14 +1,11 @@
 import { useRef, useCallback, RefObject } from 'react'
 import { useDroppable } from '@dnd-kit/core'
 import type { Row, ViewColumn, MonthGroup, ZoomLevel } from '@/types/planning'
-import { usePlanningStore } from '@/store/planningStore'
 import { useViewStore } from '@/store/viewStore'
-import { dateToPct, viewRangeStart, viewRangeEnd, pctToDate } from '@/lib/viewGeometry'
-import { toYMD, snapToZoom, addDays } from '@/lib/dateUtils'
-import { TASK_COLORS } from '@/constants/colors'
+import { dateToPct, viewRangeStart, viewRangeEnd } from '@/lib/viewGeometry'
+import { todayDate } from '@/lib/dateUtils'
 import { TaskBar } from './TaskBar'
 import { TrackGrid } from './TrackGrid'
-import { todayDate } from '@/lib/dateUtils'
 import styles from './RowTrack.module.css'
 
 interface Props {
@@ -21,8 +18,7 @@ interface Props {
 }
 
 export function RowTrack({ row, zoom, viewColumns, monthGroups, colCount, scrollRef }: Props) {
-  const addTask      = usePlanningStore(s => s.addTask)
-  const openModal    = useViewStore(s => s.openTaskModal)
+  const openModal = useViewStore(s => s.openTaskModal)
 
   const trackRef = useRef<HTMLDivElement>(null)
 
