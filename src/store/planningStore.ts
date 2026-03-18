@@ -238,7 +238,7 @@ export const usePlanningStore = create<PlanningState & PlanningActions>()(
       applyRemoteData(data) {
         if (!data || !Array.isArray(data.rows)) return
         set({
-          rows: data.rows ?? [],
+          rows: data.rows.map(r => ({ ...r, tasks: Array.isArray(r.tasks) ? r.tasks : [] })),
           groups: data.groups ?? [],
           milestones: data.milestones ?? [],
           backlog: data.backlog ?? [],
@@ -258,7 +258,7 @@ export const usePlanningStore = create<PlanningState & PlanningActions>()(
 
       loadSnapshot(doc) {
         set({
-          rows: doc.rows ?? [],
+          rows: (doc.rows ?? []).map(r => ({ ...r, tasks: Array.isArray(r.tasks) ? r.tasks : [] })),
           groups: doc.groups ?? [],
           milestones: doc.milestones ?? [],
           backlog: doc.backlog ?? [],
