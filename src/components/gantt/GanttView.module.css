@@ -1,0 +1,23 @@
+.wrapper {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  overflow: hidden;
+  position: relative;
+}
+
+.ganttScroll {
+  flex: 1;
+  overflow-x: auto;
+  overflow-y: auto;
+  position: relative;
+}
+
+.ganttInner {
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+  min-width: 100%;
+  min-height: 100%;
+  position: relative;
+}

@@ -1,0 +1,138 @@
+.header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  height: 52px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  flex-shrink: 0;
+  z-index: 100;
+}
+
+.left {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex: 1;
+  min-width: 0;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.logoIcon { color: var(--accent); font-size: 14px; }
+.logoText {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+  letter-spacing: -0.3px;
+}
+
+.tabs {
+  display: flex;
+  gap: 2px;
+}
+
+.tab {
+  padding: 5px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-soft);
+  transition: all 0.15s;
+}
+.tab:hover { background: var(--surface3); color: var(--text); }
+.tabActive { background: var(--accent-dim); color: var(--accent); }
+
+.center {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+}
+
+.iconBtn {
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  color: var(--text-soft);
+  transition: all 0.15s;
+}
+.iconBtn:hover { background: var(--surface3); color: var(--text); }
+.iconBtn:disabled { opacity: 0.3; cursor: not-allowed; }
+.iconBtnActive { background: var(--accent-dim); color: var(--accent); }
+
+.addBtn {
+  padding: 5px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-soft);
+  border: 1px solid var(--border);
+  transition: all 0.15s;
+}
+.addBtn:hover { background: var(--surface3); color: var(--text); border-color: var(--text-muted); }
+
+.separator {
+  width: 1px;
+  height: 20px;
+  background: var(--border);
+  flex-shrink: 0;
+}
+
+.users {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.userDot {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid var(--surface);
+  flex-shrink: 0;
+}
+
+.userExtra {
+  font-size: 10px;
+  color: var(--text-muted);
+}
+
+.sync {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: var(--radius-sm);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.syncDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.sync_connected .syncDot,
+.sync_synced .syncDot  { background: var(--success); }
+.sync_connecting .syncDot { background: var(--warning); }
+.sync_offline .syncDot { background: var(--text-muted); }
+.sync_error .syncDot   { background: var(--danger); }
+
+.sync_connected .syncLabel,
+.sync_synced .syncLabel { color: var(--success); }
+.sync_error .syncLabel  { color: var(--danger); }

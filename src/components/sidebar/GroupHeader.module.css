@@ -1,0 +1,63 @@
+.header {
+  display: flex;
+  height: 44px;
+  background: var(--surface2);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+}
+
+.labelCell {
+  flex-shrink: 0;
+  position: sticky;
+  left: 0;
+  z-index: 10;
+  background: var(--surface2);
+  border-right: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 8px;
+}
+
+.toggleBtn {
+  font-size: 10px;
+  color: var(--text-muted);
+  padding: 2px 4px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  transition: all 0.15s;
+}
+.toggleBtn:hover { color: var(--text); background: var(--surface3); }
+
+.nameInput {
+  flex: 1;
+  background: none;
+  border: none;
+  outline: none;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-soft);
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+  min-width: 0;
+}
+.nameInput::placeholder { color: var(--text-muted); }
+
+.actionBtn {
+  padding: 2px 5px;
+  border-radius: 3px;
+  font-size: 13px;
+  color: var(--text-muted);
+  opacity: 0;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.header:hover .actionBtn { opacity: 1; }
+.actionBtn:hover { color: var(--text); background: var(--surface3); }
+.deleteBtn:hover { color: var(--danger); }
+
+.track {
+  flex: 1;
+  border-bottom: 1px solid var(--border-subtle);
+}

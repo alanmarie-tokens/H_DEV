@@ -1,0 +1,21 @@
+.track {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  cursor: crosshair;
+  height: var(--row-h);
+}
+
+.trackDragOver { background: var(--accent-glow); }
+
+.todayLine {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--accent);
+  opacity: 0.6;
+  pointer-events: none;
+  z-index: 5;
+  transform: translateX(-50%);
+}
