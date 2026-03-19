@@ -1951,8 +1951,8 @@ function showToast(msg, isError = false) {
 }
 
 // ─── SÉRIALISATION DES DATES ──────────────────────────────────────────────────
-function dateToStr(d) { return d instanceof Date ? d.toISOString().slice(0, 10) : d; }
-function strToDate(s) { if (!s) return null; const d = new Date(s); d.setHours(0,0,0,0); return d; }
+function dateToStr(d) { return d instanceof Date ? toLocalISO(d) : d; }
+function strToDate(s) { if (!s) return null; return fromLocalISO(s); }
 
 // ─── CLIENT ID ───────────────────────────────────────────────────────────────
 async function getClientId() {
@@ -2023,9 +2023,9 @@ function applyRemoteData(data, isInitialLoad = false) {
     if (data.nextId       != null) nextId       = data.nextId;
     if (data.nextBacklogId != null) nextBacklogId = data.nextBacklogId;
 
-    _applyingRemote = false;
     render();
     if (currentView === 'backlog') renderBacklog();
+    _applyingRemote = false;
     updateSyncStatus('synced');
     if (!isInitialLoad) showToast('Planning mis à jour (autre utilisateur)');
     dbg('[OK] [Firebase] applyRemoteData terminé');
