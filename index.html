@@ -1902,6 +1902,29 @@ document.getElementById('plan-ok').addEventListener('click', () => {
 const DEBUG = false;
 const dbg = (...args) => { if (DEBUG) console.log(...args); };
 
+// ─── LOGS MULTI-UTILISATEUR (toujours actifs, aide au diagnostic) ─────────────
+// Palettes couleurs console
+const _L = {
+    info:    (m,...a) => console.log  ('%c🔵 [Planr Multi]%c '+m, 'color:#6366f1;font-weight:700','color:inherit',...a),
+    ok:      (m,...a) => console.log  ('%c✅ [Planr Multi]%c '+m, 'color:#22c55e;font-weight:700','color:inherit',...a),
+    warn:    (m,...a) => console.warn ('%c⚠️  [Planr Multi]%c '+m, 'color:#f59e0b;font-weight:700','color:inherit',...a),
+    err:     (m,...a) => console.error('%c❌ [Planr Multi]%c '+m, 'color:#ef4444;font-weight:700','color:inherit',...a),
+    date:    (m,...a) => console.log  ('%c📅 [Planr Dates]%c '+m, 'color:#06b6d4;font-weight:700','color:inherit',...a),
+    sync:    (m,...a) => console.log  ('%c🔄 [Planr Sync]%c '+m,  'color:#8b5cf6;font-weight:700','color:inherit',...a),
+    save:    (m,...a) => console.log  ('%c💾 [Planr Save]%c '+m,  'color:#f97316;font-weight:700','color:inherit',...a),
+};
+
+// Vérifie si le fuseau horaire local peut provoquer un décalage UTC (UTC+)
+(function _checkTimezone() {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+    const offset = -new Date().getTimezoneOffset(); // minutes positives = UTC+
+    if (offset > 0) {
+        _L.warn(`Fuseau horaire détecté : ${tz} (UTC+${offset/60}). Sans la correction locale, chaque sauvegarde Firebase décalerait les dates de ${offset/60}h vers le passé.`);
+    } else {
+        _L.info(`Fuseau horaire détecté : ${tz} (UTC${offset === 0 ? '' : offset/60}). Sérialisation des dates en mode local activée.`);
+    }
+})();
+
 const FIREBASE_CONFIG = {
     apiKey:            "AIzaSyAT4342sQSS5Vv_oM9Xce2jXMkh2ZkotbM",
     authDomain:        "hdev-c3842.firebaseapp.com",
@@ -1951,8 +1974,14 @@ function showToast(msg, isError = false) {
 }
 
 // ─── SÉRIALISATION DES DATES ──────────────────────────────────────────────────
-function dateToStr(d) { return d instanceof Date ? d.toISOString().slice(0, 10) : d; }
-function strToDate(s) { if (!s) return null; const d = new Date(s); d.setHours(0,0,0,0); return d; }
+// IMPORTANT : utilise toLocalISO (composants locaux) et NON toISOString() qui
+// renvoie la date UTC. En fuseau UTC+ (France = UTC+1/+2), minuit local est
+// avant minuit UTC, donc toISOString donne le jour PRÉCÉDENT → chaque
+// sauvegarde multi-utilisateur décalait les tâches d'un jour en arrière.
+function dateToStr(d) { return d instanceof Date ? toLocalISO(d) : d; }
+// Même principe : parse la chaîne ISO comme minuit LOCAL (fromLocalISO) pour
+// éviter que new Date("YYYY-MM-DD") soit interprété comme minuit UTC.
+function strToDate(s) { if (!s) return null; return fromLocalISO(s); }
 
 // ─── CLIENT ID ───────────────────────────────────────────────────────────────
 async function getClientId() {
@@ -1991,7 +2020,10 @@ function updateSyncStatus(status) {
 
 // ─── DEBOUNCE SAVE ────────────────────────────────────────────────────────────
 function scheduleSave() {
-    if (_applyingRemote) return;
+    if (_applyingRemote) {
+        dbg('[Firebase] scheduleSave bloqué (_applyingRemote=true)');
+        return;
+    }
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveToFirebase, 400);
 }
@@ -1999,10 +2031,33 @@ function scheduleSave() {
 // ─── APPLICATION DES DONNÉES DISTANTES ───────────────────────────────────────
 function applyRemoteData(data, isInitialLoad = false) {
     if (!data || !Array.isArray(data.rows)) {
+        _L.warn('applyRemoteData: données invalides reçues', data);
         console.warn('[Firebase] applyRemoteData: données invalides', data);
         return;
     }
 
+    const senderName = data._clientId
+        ? (data._clientId === _cachedClientId ? 'VOUS-MÊME ⚠️' : userNameFromId(data._clientId))
+        : 'inconnu';
+    const savedAt    = data._savedAt ? new Date(data._savedAt).toLocaleTimeString('fr-FR') : '?';
+    const nEvents    = Array.isArray(data.events) ? data.events.length : 0;
+    const nOnline    = Object.keys(_usersOnlineMap).length;
+
+    _L.sync(`applyRemoteData — émetteur: "${senderName}" | sauvegardé à: ${savedAt} | ${data.rows.length} lignes | ${nEvents} tâches | ${nOnline} utilisateur(s) en ligne | chargement initial: ${isInitialLoad}`);
+
+    if (data._clientId === _cachedClientId) {
+        _L.warn('applyRemoteData appelé avec nos propres données (_clientId identique). Cela peut indiquer un bug dans le filtre du listener.');
+    }
+
+    // Diagnostic date : afficher les premières dates pour détecter un décalage
+    if (Array.isArray(data.events) && data.events.length > 0) {
+        const sample = data.events.slice(0, 3).map(ev => `"${ev.title||'?'}" start=${ev.start} end=${ev.end}`).join(' | ');
+        _L.date(`Dates reçues (3 premières) → ${sample}`);
+    }
+
+    // IMPORTANT : _applyingRemote reste true pendant TOUT applyRemoteData + render()
+    // pour empêcher que render() déclenche scheduleSave() et renvoie les données
+    // à Firebase (boucle d'écho qui décalait les dates jour par jour).
     _applyingRemote = true;
 
     // ROWS
@@ -2023,11 +2078,23 @@ function applyRemoteData(data, isInitialLoad = false) {
     if (data.nextId       != null) nextId       = data.nextId;
     if (data.nextBacklogId != null) nextBacklogId = data.nextBacklogId;
 
-    _applyingRemote = false;
+    // Vérification dates après désérialisation
+    if (events.length > 0) {
+        const sample = events.slice(0, 3).map(ev => `"${ev.title||'?'}" start=${toLocalISO(ev.start)} end=${toLocalISO(ev.end)}`).join(' | ');
+        _L.date(`Dates après désérialisation (3 premières) → ${sample}`);
+    }
+
     render();
     if (currentView === 'backlog') renderBacklog();
+
+    // Remettre _applyingRemote à false APRÈS render() pour que render() ne
+    // déclenche PAS scheduleSave() (ce serait une ré-écriture inutile des
+    // données distantes, source de la boucle d'écho + décalage de dates).
+    _applyingRemote = false;
+
     updateSyncStatus('synced');
     if (!isInitialLoad) showToast('Planning mis à jour (autre utilisateur)');
+    _L.ok(`applyRemoteData terminé — ${events.length} tâche(s) chargée(s)`);
     dbg('[OK] [Firebase] applyRemoteData terminé');
 }
 
@@ -2039,6 +2106,12 @@ async function saveToFirebase() {
     saveInProgress = true;
     try {
         const clientId = await getClientId();
+        const nOnline  = Object.keys(_usersOnlineMap).length;
+        _L.save(`Sauvegarde démarrée | clientId: ${clientId} | ${events.length} tâche(s) | ${nOnline} utilisateur(s) en ligne`);
+        if (events.length > 0) {
+            const sample = events.slice(0, 3).map(ev => `"${ev.title||'?'}" start=${toLocalISO(ev.start)} end=${toLocalISO(ev.end)}`).join(' | ');
+            _L.date(`Dates à sauvegarder (3 premières) → ${sample}`);
+        }
         const data = {
             rows:         [...ROWS],
             events:       events.map(ev => ({
@@ -2054,8 +2127,10 @@ async function saveToFirebase() {
         };
         await firebaseDB.ref(DB_PLANNING_PATH).set(data);
         updateSyncStatus('synced');
+        _L.ok('Sauvegarde Firebase réussie');
         dbg('[OK] [Firebase] Sauvegarde réussie');
     } catch(e) {
+        _L.err('saveToFirebase erreur:', e.code || e.message);
         console.error('[Firebase] saveToFirebase error:', e);
         if (e.code === 'PERMISSION_DENIED' || (e.message||'').toLowerCase().includes('permission')) {
             showToast('Erreur: Firebase en lecture seule (vérifiez les permissions)', true);
@@ -2108,13 +2183,25 @@ async function startFirebaseListener() {
     firebaseListenerActive = true;
     try {
         const clientId = await getClientId();
+        _L.info(`Listener Firebase démarré | clientId local: ${clientId}`);
         firebaseDB.ref(DB_PLANNING_PATH).on('value', snapshot => {
             const data = snapshot.val();
-            if (!data) return;
-            if (data._clientId === clientId) return; // ignorer nos propres écritures
+            if (!data) {
+                _L.info('Listener: snapshot vide reçu (planning vide en base)');
+                return;
+            }
+            const nOnline = Object.keys(_usersOnlineMap).length;
+            if (data._clientId === clientId) {
+                _L.sync(`Listener: écho de notre propre sauvegarde ignoré (clientId: ${clientId})`);
+                return; // ignorer nos propres écritures
+            }
+            const senderName = userNameFromId(data._clientId||'');
+            const savedAt    = data._savedAt ? new Date(data._savedAt).toLocaleTimeString('fr-FR') : '?';
+            _L.sync(`Listener: données reçues de "${senderName}" à ${savedAt} | ${nOnline} utilisateur(s) en ligne`);
             applyRemoteData(data);
         });
     } catch(e) {
+        _L.err('startFirebaseListener erreur:', e.message);
         console.error('[Firebase] startFirebaseListener error:', e);
         firebaseListenerActive = false;
     }
@@ -2139,6 +2226,7 @@ async function loadUserSetting(key, defaultValue = null) {
 }
 
 // ─── PRÉSENCE MULTI-UTILISATEURS ─────────────────────────────────────────────
+const PRESENCE_TIMEOUT_MS = 90000; // 90s sans heartbeat = utilisateur considéré hors ligne
 const _USER_ADJ   = ['Bleu','Vert','Rouge','Gris','Vif','Sage','Doux','Fort','Bref','Fin','Grand','Leste'];
 const _USER_NOUNS = ['Loup','Renard','Aigle','Hibou','Ours','Tigre','Lynx','Cerf','Bison','Coyote','Puma','Faucon'];
 const _USER_COLS  = ['#6366f1','#22c55e','#f59e0b','#ef4444','#8b5cf6','#ec4899','#06b6d4','#84cc16','#f97316','#14b8a6'];
@@ -2155,15 +2243,21 @@ async function startPresence() {
         if (!name) { name = userNameFromId(clientId); await saveUserSetting('displayName', name); }
         _currentUserName = name;
         const color = userColorFromId(clientId);
+        _L.info(`Présence démarrée | nom: "${name}" | clientId: ${clientId}`);
         const presRef = firebaseDB.ref(`${DB_PRESENCE_PATH}/${clientId}`);
         presRef.onDisconnect().remove();
         await presRef.set({ name, color, clientId, lastSeen: Date.now() });
         _presenceIntervalId = setInterval(() => { if (firebaseDB) presRef.update({ lastSeen: Date.now() }); }, 30000);
         firebaseDB.ref(DB_PRESENCE_PATH).on('value', snap => {
             _usersOnlineMap = snap.val() || {};
+            const nOnline = Object.values(_usersOnlineMap).filter(u => !u.lastSeen || (Date.now()-u.lastSeen) < PRESENCE_TIMEOUT_MS).length;
+            _L.info(`Présence mise à jour : ${nOnline} utilisateur(s) en ligne → ${Object.values(_usersOnlineMap).map(u=>u.name||u.clientId).join(', ')}`);
             renderOnlineUsers();
         });
-    } catch(e) { console.error('[Firebase] startPresence error:', e); }
+    } catch(e) {
+        _L.err('startPresence erreur:', e.message);
+        console.error('[Firebase] startPresence error:', e);
+    }
 }
 
 function renderOnlineUsers() {
@@ -2171,7 +2265,7 @@ function renderOnlineUsers() {
     if (!container) return;
     container.innerHTML = '';
     const now = Date.now();
-    const STALE = 90000;
+    const STALE = PRESENCE_TIMEOUT_MS;
     const users = Object.values(_usersOnlineMap).filter(u =>
         u.clientId === _cachedClientId || !u.lastSeen || (now - u.lastSeen) < STALE
     );
@@ -2194,12 +2288,17 @@ function renderOnlineUsers() {
 
 // ─── SÉQUENCE D'INITIALISATION ────────────────────────────────────────────────
 async function initApp() {
+    _L.info('Initialisation de Planr…');
     render();                       // affichage immédiat vide
     initFirebaseSync();
-    if (!firebaseDB) return;
+    if (!firebaseDB) {
+        _L.err('Firebase non initialisé — vérifiez FIREBASE_CONFIG.databaseURL');
+        return;
+    }
     await loadFromFirebase();       // chargement initial depuis Firebase
     await startFirebaseListener();  // écoute temps réel
     await startPresence();          // présence multi-utilisateurs
+    _L.ok('Planr initialisé avec succès');
 }
 initApp();
 
