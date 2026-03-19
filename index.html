@@ -2108,10 +2108,13 @@ async function startFirebaseListener() {
     firebaseListenerActive = true;
     try {
         const clientId = await getClientId();
+        let firstFire = true;
         firebaseDB.ref(DB_PLANNING_PATH).on('value', snapshot => {
             const data = snapshot.val();
             if (!data) return;
             if (data._clientId === clientId) return; // ignorer nos propres écritures
+            // Ignorer le premier déclenchement immédiat (données déjà chargées par loadFromFirebase)
+            if (firstFire) { firstFire = false; return; }
             applyRemoteData(data);
         });
     } catch(e) {
@@ -2194,7 +2197,9 @@ function renderOnlineUsers() {
 
 // ─── SÉQUENCE D'INITIALISATION ────────────────────────────────────────────────
 async function initApp() {
+    _applyingRemote = true;         // empêche le render initial de déclencher un save
     render();                       // affichage immédiat vide
+    _applyingRemote = false;
     initFirebaseSync();
     if (!firebaseDB) return;
     await loadFromFirebase();       // chargement initial depuis Firebase
