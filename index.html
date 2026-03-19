@@ -1573,7 +1573,7 @@ wrap.addEventListener('touchmove',e=>{
   else if(e.touches.length===2){const d=Math.abs(e.touches[0].clientX-e.touches[1].clientX);ppd=Math.max(2,Math.min(160,ppd*(d/tDist)));tDist=d;render();}
 },{passive:true});
 // ── RESIZE ──
-let rsz; window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(render,80);});
+let rsz; window.addEventListener('resize',()=>{clearTimeout(rsz);rsz=setTimeout(()=>{renderRuler();renderGrid();renderEvents();},80);});
 // ── HINT ──
 setTimeout(()=>document.getElementById('hint').classList.add('hidden'),7000);
 // ── CATEGORY MODAL ──
@@ -2108,13 +2108,10 @@ async function startFirebaseListener() {
     firebaseListenerActive = true;
     try {
         const clientId = await getClientId();
-        let firstFire = true;
         firebaseDB.ref(DB_PLANNING_PATH).on('value', snapshot => {
             const data = snapshot.val();
             if (!data) return;
             if (data._clientId === clientId) return; // ignorer nos propres écritures
-            // Ignorer le premier déclenchement immédiat (données déjà chargées par loadFromFirebase)
-            if (firstFire) { firstFire = false; return; }
             applyRemoteData(data);
         });
     } catch(e) {
