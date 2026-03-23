@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { ZoomLevel, ActiveTab, FilterState, ModalState } from '@/types/planning'
+import type { ZoomLevel, ActiveTab, ReportingSubTab, FilterState, ModalState } from '@/types/planning'
 import { startOfMonth, startOfWeek, addMonths, addDays, startOfYear, todayDate } from '@/lib/dateUtils'
 
 interface ViewState {
@@ -13,6 +13,7 @@ interface ViewState {
   filterState: FilterState
   modalState: ModalState | null
   milestoneModalOpen: boolean
+  reportingSubTab: ReportingSubTab
   syncStatus: 'connecting' | 'connected' | 'synced' | 'offline' | 'error'
   usersOnline: Record<string, { name: string; color: string; lastSeen: number }>
   miniCalYear: number
@@ -33,6 +34,7 @@ interface ViewActions {
   resetFilter: () => void
   openTaskModal: (rowId: number, clickPercent: number, editTaskId?: number) => void
   closeModal: () => void
+  setReportingSubTab: (tab: ReportingSubTab) => void
   openMilestoneModal: () => void
   closeMilestoneModal: () => void
   setSyncStatus: (s: ViewState['syncStatus']) => void
@@ -58,6 +60,7 @@ export const useViewStore = create<ViewState & ViewActions>()((set, get) => ({
   filterState: DEFAULT_FILTER,
   modalState: null,
   milestoneModalOpen: false,
+  reportingSubTab: 'categorie' as ReportingSubTab,
   syncStatus: 'connecting',
   usersOnline: {},
   miniCalYear: new Date().getFullYear(),
@@ -112,6 +115,7 @@ export const useViewStore = create<ViewState & ViewActions>()((set, get) => ({
   },
 
   closeModal() { set({ modalState: null }) },
+  setReportingSubTab(tab) { set({ reportingSubTab: tab }) },
   openMilestoneModal() { set({ milestoneModalOpen: true }) },
   closeMilestoneModal() { set({ milestoneModalOpen: false }) },
 

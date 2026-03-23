@@ -40,13 +40,13 @@ export function AppHeader() {
 
         {/* Tab bar */}
         <nav className={styles.tabs}>
-          {(['gantt','dashboard','list'] as const).map(tab => (
+          {(['gantt','reporting','list'] as const).map(tab => (
             <button
               key={tab}
               className={`${styles.tab} ${activeTab === tab ? styles.tabActive : ''}`}
               onClick={() => setActiveTab(tab)}
             >
-              {tab === 'gantt' ? 'Gantt' : tab === 'dashboard' ? 'Dashboard' : 'Liste'}
+              {tab === 'gantt' ? 'Gantt' : tab === 'reporting' ? 'Reporting' : 'Liste'}
             </button>
           ))}
         </nav>

@@ -2,7 +2,8 @@
 
 export type ZoomLevel = 'currentweek' | 'week' | 'month' | 'quarter' | 'year'
 export type TaskStatus = 'todo' | 'in_progress' | 'done'
-export type ActiveTab = 'gantt' | 'dashboard' | 'list'
+export type ActiveTab = 'gantt' | 'reporting' | 'list'
+export type ReportingSubTab = 'categorie' | 'ligne' | 'metiers'
 
 export interface HistoryEntry {
   date: string      // ISO timestamp
