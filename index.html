@@ -24,6 +24,20 @@
       </section>
 
       <section>
+        <h2>Périmètre affiché</h2>
+        <div id="crumbs"></div>
+        <div id="scope-stats"></div>
+        <div class="buttons" style="margin-top:6px">
+          <button id="show-all">Tout afficher</button>
+          <button id="fit">Recadrer</button>
+        </div>
+        <div id="storey-nav" class="buttons" style="margin-top:6px" hidden>
+          <button id="storey-down">▼ Étage inférieur</button>
+          <button id="storey-up">▲ Étage supérieur</button>
+        </div>
+      </section>
+
+      <section>
         <h2>Calques</h2>
         <label class="check"><input id="layer-0" type="checkbox" checked /><i class="swatch" style="background:#d6d0c6"></i>Murs<span class="n" id="n-0">0</span></label>
         <label class="check"><input id="layer-1" type="checkbox" checked /><i class="swatch" style="background:#707682"></i>Dalles<span class="n" id="n-1">0</span></label>
@@ -50,7 +64,6 @@
         <div class="row"><span>CPU par image</span><b id="s-cpu">—</b></div>
         <div class="row"><span>Images / s</span><b id="s-fps">—</b></div>
         <label class="check" style="margin-top:6px"><input id="rotate" type="checkbox" />Rotation automatique</label>
-        <div class="buttons" style="margin-top:6px"><button id="fit">Recadrer la vue</button></div>
       </section>
 
       <section>
@@ -60,7 +73,8 @@
         <input id="speed" type="range" min="0" step="1" />
         <div class="hint">
           ZQSD (WASD) ou flèches : avancer, reculer, glisser · E / A : monter, descendre · Maj : ×4<br />
-          Mode vol : glisser pour regarder autour de soi, molette pour avancer.
+          Mode vol : glisser pour regarder autour de soi, molette pour avancer.<br />
+          Page préc. / suiv. : changer d’étage.
         </div>
       </section>
 
@@ -72,6 +86,12 @@
       <section class="hint">
         Hors mode vol — glisser : orbite · Maj ou clic droit + glisser : déplacement · molette / pincement : zoom
       </section>
+    </aside>
+
+    <aside id="tree">
+      <h2>Structure</h2>
+      <p class="hint">Site › Bâtiment › Étage › Pièce. Cliquer sur un élément n’affiche que lui.</p>
+      <div id="tree-body"></div>
     </aside>
 
     <script type="module" src="/src/main.ts"></script>

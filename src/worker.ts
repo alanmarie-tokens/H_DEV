@@ -12,8 +12,14 @@ self.onmessage = (e: MessageEvent<WorkerRequest>) => {
   const req = e.data;
   try {
     const t0 = performance.now();
-    const lists = req.kind === 'generate' ? generate(req.count, req.seed) : importJson(req.text);
-    const scene = buildScene(lists);
+    let scene;
+    if (req.kind === 'generate') {
+      const { lists, hierarchy } = generate(req.count, req.seed);
+      scene = buildScene(lists, hierarchy);
+    } else {
+      const { lists, hierarchy, spaceNames } = importJson(req.text);
+      scene = buildScene(lists, hierarchy, spaceNames);
+    }
     const ms = performance.now() - t0;
     (self as unknown as Worker).postMessage({ id: req.id, scene, ms }, sceneTransferables(scene));
   } catch (err) {

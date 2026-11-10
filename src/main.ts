@@ -1,7 +1,11 @@
 import './style.css';
 import { attachControls } from './controls';
 import { Renderer } from './renderer';
-import { KIND_NAMES, LAYER_COUNT, LAYER_NAMES, STRIDE_WORDS, WALL, type SceneData } from './scene';
+import { Navigator } from './navigator';
+import {
+  GROUNDS, KIND_NAMES, LAYER_COUNT, LAYER_NAMES, SPACE, STOREY_FLOOR, STRIDE_WORDS, WALL,
+  scopeBox, scopeName, scopePath, scopeRange, type SceneData, type Scope,
+} from './scene';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const fmt = (n: number) => Math.round(n).toLocaleString('fr-FR');
@@ -20,6 +24,8 @@ try {
 
 let scene: SceneData | null = null;
 let layerFloats: Float32Array[] = [];
+let layerWords: Uint32Array[] = [];
+let scope: Scope = { level: 'all' };
 let autoRotate = false;
 
 // --- Render on demand: a frame is drawn only when something changed. ---------
@@ -80,6 +86,7 @@ worker.onmessage = (e: MessageEvent<{ id: number; scene?: SceneData; ms?: number
   }
   scene = e.data.scene;
   layerFloats = scene.layers.map((l) => new Float32Array(l.data));
+  layerWords = scene.layers.map((l) => new Uint32Array(l.data));
   const t0 = performance.now();
   renderer.setScene(scene);
   const upload = performance.now() - t0;
@@ -89,7 +96,8 @@ worker.onmessage = (e: MessageEvent<{ id: number; scene?: SceneData; ms?: number
   for (let i = 0; i < LAYER_COUNT; i++) $('n-' + i).textContent = fmt(scene.layers[i].count);
   statusEl.textContent = `Préparation ${fmt(e.data.ms ?? 0)} ms · envoi GPU ${fmt(upload)} ms`;
   showSelection(-1);
-  invalidate();
+  nav.setScene(scene);
+  setScope({ level: 'all' });
 };
 
 function load(message: { kind: 'generate'; count: number; seed: number } | { kind: 'import'; text: string }): void {
@@ -98,7 +106,100 @@ function load(message: { kind: 'generate'; count: number; seed: number } | { kin
   worker.postMessage({ id: ++requestId, ...message });
 }
 
+// --- Spatial structure: site > building > storey > room ----------------------
+const STOREY_WORD = STRIDE_WORDS - 1;
+
+function row(label: string, value: string, onClick?: () => void): HTMLElement {
+  const el = document.createElement('div');
+  el.className = 'row';
+  const key = document.createElement('span');
+  key.textContent = label;
+  const val = document.createElement(onClick ? 'a' : 'b');
+  val.textContent = value;
+  if (onClick) val.addEventListener('click', onClick);
+  el.append(key, val);
+  return el;
+}
+
+/** Name of a room: the imported one, or its use and number (storey.rank). */
+function roomLabel(index: number): string {
+  if (!scene) return '';
+  const given = scene.roomNames?.[index];
+  if (given) return given;
+  const h = scene.hierarchy, spaces = scene.layers[SPACE];
+  const storey = layerWords[SPACE][index * STRIDE_WORDS + STOREY_WORD];
+  const level = storey - h.buildingFirstStorey[h.storeyBuilding[storey]];
+  const rank = index - spaces.storeyStart[storey] + 1;
+  return `${KIND_NAMES[SPACE][spaces.kinds[index]] ?? 'Pièce'} ${level}.${String(rank).padStart(2, '0')}`;
+}
+
+/** Displays only a site, a building or a storey, and frames it. */
+function setScope(next: Scope, frame = true): void {
+  if (!scene) return;
+  scope = next;
+  const h = scene.hierarchy;
+  const [first, end] = scopeRange(h, scope);
+  renderer.scope[0] = first;
+  renderer.scope[1] = end;
+  if (frame) renderer.camera.fit(scopeBox(scene, scope));
+
+  // Breadcrumb.
+  const crumbs: Scope[] = [{ level: 'all' }, ...scopePath(h, scope)];
+  $('crumbs').replaceChildren(...crumbs.flatMap((c, i) => {
+    const link = document.createElement(i === crumbs.length - 1 ? 'b' : 'a');
+    link.textContent = scopeName(h, c);
+    if (i < crumbs.length - 1) link.addEventListener('click', () => setScope(c));
+    return i === 0 ? [link] : [document.createTextNode(' › '), link];
+  }));
+
+  // Contents of the scope. Storey ranges give object ranges directly.
+  const last = Math.min(end, h.storeyNames.length);
+  let buildings = 0, storeys = 0;
+  for (let st = first; st < last; st++) if (h.storeyKind[st] === STOREY_FLOOR) storeys++;
+  for (let b = 0; b < h.buildingNames.length; b++) {
+    if (h.buildingKind[b] !== GROUNDS && h.buildingFirstStorey[b] >= first && h.buildingFirstStorey[b] < last) buildings++;
+  }
+  const spaces = scene.layers[SPACE], f = layerFloats[SPACE];
+  const r0 = spaces.storeyStart[first], r1 = spaces.storeyStart[last];
+  let area = 0;
+  for (let i = r0, o = r0 * STRIDE_WORDS; i < r1; i++, o += STRIDE_WORDS) area += f[o + 3] * f[o + 4] * 4;
+  const objects = scene.layers.reduce((sum, l) => sum + l.storeyStart[last] - l.storeyStart[first], 0);
+  const rows: HTMLElement[] = [];
+  if (scope.level === 'all') rows.push(row('Sites', fmt(h.siteNames.length)));
+  if (scope.level === 'all' || scope.level === 'site') rows.push(row('Bâtiments', fmt(buildings)));
+  if (scope.level !== 'storey') rows.push(row('Étages', fmt(storeys)));
+  else rows.push(row('Altitude', h.storeyElevation[scope.index].toFixed(2) + ' m'));
+  rows.push(row('Pièces', fmt(r1 - r0)), row('Surface des pièces', fmt(area) + ' m²'), row('Objets', fmt(objects)));
+  $('scope-stats').replaceChildren(...rows);
+
+  $('storey-nav').hidden = scope.level !== 'storey';
+  $<HTMLButtonElement>('show-all').disabled = scope.level === 'all';
+  nav.setActive(scope);
+
+  // A selected object that is no longer displayed is deselected.
+  if (renderer.selected >= 0) {
+    const { layer, index } = locate(renderer.selected);
+    const storey = layerWords[layer][index * STRIDE_WORDS + STOREY_WORD];
+    if (storey < first || storey >= end) showSelection(-1);
+  }
+  invalidate();
+}
+
+/** Moves to the storey above or below, within the same building. */
+function stepStorey(delta: number): void {
+  if (!scene || scope.level !== 'storey') return;
+  const h = scene.hierarchy, b = h.storeyBuilding[scope.index];
+  const next = scope.index + delta;
+  if (next >= h.buildingFirstStorey[b] && next < h.buildingFirstStorey[b + 1]) setScope({ level: 'storey', index: next });
+}
+
 // --- Selection ---------------------------------------------------------------
+function locate(id: number): { layer: number; index: number } {
+  let layer = 0;
+  while (layer < LAYER_COUNT - 1 && id >= renderer.layerBase[layer + 1]) layer++;
+  return { layer, index: id - renderer.layerBase[layer] };
+}
+
 function showSelection(id: number): void {
   renderer.selected = id;
   const el = $('selection');
@@ -106,37 +207,41 @@ function showSelection(id: number): void {
     el.textContent = 'Cliquez sur un objet pour l’inspecter.';
     return;
   }
-  let layer = 0;
-  while (layer < LAYER_COUNT - 1 && id >= renderer.layerBase[layer + 1]) layer++;
-  const index = id - renderer.layerBase[layer];
+  const { layer, index } = locate(id);
   const f = layerFloats[layer];
   const o = index * STRIDE_WORDS;
   const m = (v: number) => v.toFixed(2) + ' m';
-  const rows: [string, string][] = [
-    ['Type', KIND_NAMES[layer][scene.layers[layer].kinds[index]] ?? LAYER_NAMES[layer]],
-    ['N°', fmt(index)],
-  ];
+  const h = scene.hierarchy;
+  const storey = layerWords[layer][o + STOREY_WORD];
+  const building = h.storeyBuilding[storey];
+  const site = h.buildingSite[building];
+
+  const rows: HTMLElement[] = [];
+  if (layer === SPACE) rows.push(row('Pièce', roomLabel(index)));
+  rows.push(
+    row('Type', KIND_NAMES[layer][scene.layers[layer].kinds[index]] ?? LAYER_NAMES[layer]),
+    row('Site', h.siteNames[site], () => setScope({ level: 'site', index: site })),
+    row('Bâtiment', h.buildingNames[building], () => setScope({ level: 'building', index: building })),
+    row('Étage', h.storeyNames[storey], () => setScope({ level: 'storey', index: storey })),
+  );
   if (layer === WALL) {
-    rows.push(['Longueur', m(f[o + 3] * 2)], ['Épaisseur', m(f[o + 4] * 2)], ['Hauteur', m(f[o + 5] * 2)]);
+    rows.push(row('Longueur', m(f[o + 3] * 2)), row('Épaisseur', m(f[o + 4] * 2)), row('Hauteur', m(f[o + 5] * 2)));
   } else {
-    rows.push(['Dimensions', `${(f[o + 3] * 2).toFixed(2)} × ${(f[o + 4] * 2).toFixed(2)} m`],
-      [layer === 1 ? 'Épaisseur' : 'Hauteur', m(f[o + 5] * 2)],
-      ['Surface', (f[o + 3] * f[o + 4] * 4).toFixed(1) + ' m²']);
+    rows.push(row('Dimensions', `${(f[o + 3] * 2).toFixed(2)} × ${(f[o + 4] * 2).toFixed(2)} m`),
+      row(layer === SPACE ? 'Hauteur' : 'Épaisseur', m(f[o + 5] * 2)),
+      row('Surface', (f[o + 3] * f[o + 4] * 4).toFixed(1) + ' m²'));
   }
-  rows.push(['Niveau bas', m(f[o + 2] - f[o + 5])],
-    ['Position', `${f[o].toFixed(1)} ; ${f[o + 1].toFixed(1)}`],
-    ['Orientation', ((f[o + 6] * 180) / Math.PI).toFixed(0) + '°']);
-  el.replaceChildren(...rows.map(([k, v]) => {
-    const row = document.createElement('div');
-    row.className = 'row';
-    const key = document.createElement('span');
-    key.textContent = k;
-    const value = document.createElement('b');
-    value.textContent = v;
-    row.append(key, value);
-    return row;
-  }));
+  rows.push(row('Niveau bas', m(f[o + 2] - f[o + 5])));
+  el.replaceChildren(...rows);
 }
+
+const nav = new Navigator($('tree-body'), (next) => setScope(next), (spaceIndex) => {
+  // A room picked in the tree: show its storey and select it.
+  const storey = layerWords[SPACE][spaceIndex * STRIDE_WORDS + STOREY_WORD];
+  if (scope.level !== 'storey' || scope.index !== storey) setScope({ level: 'storey', index: storey });
+  showSelection(renderer.layerBase[SPACE] + spaceIndex);
+  invalidate();
+}, roomLabel);
 
 // --- UI wiring ---------------------------------------------------------------
 const maxDistance = () => {
@@ -200,8 +305,18 @@ $<HTMLInputElement>('rotate').addEventListener('change', (e) => {
 });
 
 $('fit').addEventListener('click', () => {
-  renderer.camera.fit(renderer.bounds);
+  if (scene) renderer.camera.fit(scopeBox(scene, scope));
   invalidate();
+});
+
+$('show-all').addEventListener('click', () => setScope({ level: 'all' }));
+$('storey-up').addEventListener('click', () => stepStorey(1));
+$('storey-down').addEventListener('click', () => stepStorey(-1));
+window.addEventListener('keydown', (e) => {
+  if (e.code === 'PageUp' || e.code === 'PageDown') {
+    e.preventDefault();
+    stepStorey(e.code === 'PageUp' ? 1 : -1);
+  }
 });
 
 $<HTMLInputElement>('file').addEventListener('change', async (e) => {

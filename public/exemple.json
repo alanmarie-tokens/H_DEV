@@ -1,16 +1,46 @@
 {
-  "walls": [
-    { "start": [0, 0], "end": [12, 0], "elevation": 0.25, "height": 2.75, "thickness": 0.3 },
-    { "start": [12, 0], "end": [12, 8], "elevation": 0.25, "height": 2.75, "thickness": 0.3 },
-    { "start": [12, 8], "end": [0, 8], "elevation": 0.25, "height": 2.75, "thickness": 0.3 },
-    { "start": [0, 8], "end": [0, 0], "elevation": 0.25, "height": 2.75, "thickness": 0.3 },
-    { "start": [6, 0], "end": [6, 8], "elevation": 0.25, "height": 2.75, "thickness": 0.12, "color": "#e8e2d6" }
-  ],
-  "slabs": [
-    { "min": [-0.15, -0.15], "max": [12.15, 8.15], "elevation": 0, "thickness": 0.25 }
-  ],
-  "spaces": [
-    { "min": [0.2, 0.2], "max": [5.9, 7.8], "elevation": 0.25, "height": 2.6, "color": "#4f9dff" },
-    { "min": [6.1, 0.2], "max": [11.8, 7.8], "elevation": 0.25, "height": 2.6, "color": "#ffb347" }
+  "sites": [
+    {
+      "name": "Site exemple",
+      "buildings": [
+        {
+          "name": "Pavillon",
+          "storeys": [
+            {
+              "name": "RDC", "elevation": 0, "height": 3,
+              "walls": [
+                { "start": [0, 0], "end": [12, 0], "elevation": 0.25, "height": 2.75, "thickness": 0.3 },
+                { "start": [12, 0], "end": [12, 8], "elevation": 0.25, "height": 2.75, "thickness": 0.3 },
+                { "start": [12, 8], "end": [0, 8], "elevation": 0.25, "height": 2.75, "thickness": 0.3 },
+                { "start": [0, 8], "end": [0, 0], "elevation": 0.25, "height": 2.75, "thickness": 0.3 },
+                { "start": [6, 0], "end": [6, 8], "elevation": 0.25, "height": 2.75, "thickness": 0.12, "color": "#e8e2d6" }
+              ],
+              "slabs": [{ "min": [-0.15, -0.15], "max": [12.15, 8.15], "elevation": 0, "thickness": 0.25 }],
+              "spaces": [
+                { "name": "Accueil", "min": [0.2, 0.2], "max": [5.9, 7.8], "elevation": 0.25, "height": 2.6, "color": "#4f9dff" },
+                { "name": "Atelier", "min": [6.1, 0.2], "max": [11.8, 7.8], "elevation": 0.25, "height": 2.6, "color": "#ffb347" }
+              ]
+            },
+            {
+              "name": "R+1", "elevation": 3, "height": 3,
+              "walls": [
+                { "start": [0, 0], "end": [12, 0], "elevation": 0.25, "height": 2.75, "thickness": 0.3 },
+                { "start": [12, 0], "end": [12, 8], "elevation": 0.25, "height": 2.75, "thickness": 0.3 },
+                { "start": [12, 8], "end": [0, 8], "elevation": 0.25, "height": 2.75, "thickness": 0.3 },
+                { "start": [0, 8], "end": [0, 0], "elevation": 0.25, "height": 2.75, "thickness": 0.3 },
+                { "start": [4, 0], "end": [4, 8], "elevation": 0.25, "height": 2.75, "thickness": 0.12, "color": "#e8e2d6" },
+                { "start": [8, 0], "end": [8, 8], "elevation": 0.25, "height": 2.75, "thickness": 0.12, "color": "#e8e2d6" }
+              ],
+              "slabs": [{ "min": [-0.15, -0.15], "max": [12.15, 8.15], "elevation": 0, "thickness": 0.25 }],
+              "spaces": [
+                { "name": "Bureau 1", "min": [0.2, 0.2], "max": [3.9, 7.8], "elevation": 0.25, "height": 2.6, "color": "#78dc96" },
+                { "name": "Bureau 2", "min": [4.1, 0.2], "max": [7.9, 7.8], "elevation": 0.25, "height": 2.6, "color": "#b48cff" },
+                { "name": "Salle de réunion", "min": [8.1, 0.2], "max": [11.8, 7.8], "elevation": 0.25, "height": 2.6, "color": "#5adcdc" }
+              ]
+            }
+          ]
+        }
+      ]
+    }
   ]
 }
