@@ -14,6 +14,16 @@ npm run build    # vérification TypeScript + build de production dans dist/
 
 Le paramètre d'URL `?n=2000000` choisit le nombre d'objets de la scène de test.
 
+## Navigation
+
+- **Orbite** (par défaut) : glisser pour tourner, Maj ou clic droit + glisser
+  pour déplacer, molette ou pincement pour zoomer.
+- **Mode vol** (touche F) : glisser pour regarder autour de soi, molette pour
+  avancer.
+- **Clavier**, dans les deux modes : ZQSD (WASD) ou flèches pour avancer,
+  reculer et glisser ; E / A pour monter et descendre ; Maj pour aller 4 fois
+  plus vite. Les touches sont lues par position physique.
+
 ## Pourquoi c'est rapide
 
 - **Un objet = 32 octets.** Chaque mur, dalle ou espace est une boîte orientée

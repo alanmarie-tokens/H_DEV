@@ -43,6 +43,7 @@ function frame(now: number): void {
   if (dt > 0 && dt < 250) fps = fps === 0 ? 1000 / dt : fps * 0.9 + (1000 / dt) * 0.1;
   else fps = 0;
 
+  if (controls.update(dt)) invalidate();
   if (autoRotate) {
     renderer.camera.azimuth += Math.min(dt, 100) * 0.0002;
     invalidate();
@@ -140,12 +141,36 @@ const maxDistance = () => {
   return Math.hypot(b[3] - b[0], b[4] - b[1], b[5] - b[2]) * 3 + 50;
 };
 
-attachControls(canvas, renderer.camera, maxDistance, invalidate, (x, y) => {
+const controls = attachControls(canvas, renderer.camera, maxDistance, invalidate, (x, y) => {
   showSelection(renderer.pick(x, y));
   invalidate();
 });
 
 new ResizeObserver(invalidate).observe(canvas);
+
+const SPEED_STEPS = [2, 5, 10, 30, 60, 120, 250, 500];
+const flyBox = $<HTMLInputElement>('fly');
+const speedSlider = $<HTMLInputElement>('speed');
+speedSlider.max = String(SPEED_STEPS.length - 1);
+speedSlider.value = String(SPEED_STEPS.indexOf(controls.speed));
+const applySpeed = () => {
+  controls.speed = SPEED_STEPS[Number(speedSlider.value)];
+  $('speed-label').textContent = controls.speed + ' m/s';
+};
+speedSlider.addEventListener('input', applySpeed);
+applySpeed();
+flyBox.addEventListener('change', () => { controls.fly = flyBox.checked; });
+// Hand the keyboard back to navigation once a panel control has been used.
+const releaseFocus = () => (document.activeElement as HTMLElement | null)?.blur();
+$('panel').addEventListener('change', releaseFocus);
+$('panel').addEventListener('click', (e) => {
+  if ((e.target as HTMLElement).tagName === 'BUTTON') releaseFocus();
+});
+window.addEventListener('keydown', (e) => {
+  const el = e.target as HTMLElement | null;
+  if (e.code !== 'KeyF' || e.ctrlKey || e.metaKey || e.altKey || (el && el.tagName === 'INPUT' && el !== flyBox)) return;
+  flyBox.checked = controls.fly = !controls.fly;
+});
 
 const slider = $<HTMLInputElement>('count');
 slider.max = String(COUNT_STEPS.length - 1);
