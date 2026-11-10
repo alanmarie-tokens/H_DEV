@@ -1,7 +1,7 @@
 import './style.css';
 import { attachControls } from './controls';
 import { Renderer } from './renderer';
-import { LAYER_COUNT, LAYER_NAMES, STRIDE_WORDS, WALL, type SceneData } from './scene';
+import { KIND_NAMES, LAYER_COUNT, LAYER_NAMES, STRIDE_WORDS, WALL, type SceneData } from './scene';
 
 const $ = <T extends HTMLElement>(id: string) => document.getElementById(id) as T;
 const fmt = (n: number) => Math.round(n).toLocaleString('fr-FR');
@@ -112,7 +112,10 @@ function showSelection(id: number): void {
   const f = layerFloats[layer];
   const o = index * STRIDE_WORDS;
   const m = (v: number) => v.toFixed(2) + ' m';
-  const rows: [string, string][] = [['Type', LAYER_NAMES[layer]], ['N°', fmt(index)]];
+  const rows: [string, string][] = [
+    ['Type', KIND_NAMES[layer][scene.layers[layer].kinds[index]] ?? LAYER_NAMES[layer]],
+    ['N°', fmt(index)],
+  ];
   if (layer === WALL) {
     rows.push(['Longueur', m(f[o + 3] * 2)], ['Épaisseur', m(f[o + 4] * 2)], ['Hauteur', m(f[o + 5] * 2)]);
   } else {
