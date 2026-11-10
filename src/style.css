@@ -64,6 +64,9 @@ h2 {
 label.check { display: flex; align-items: center; gap: 8px; padding: 2px 0; cursor: pointer; }
 label.check .n { margin-left: auto; color: var(--muted); font-variant-numeric: tabular-nums; }
 .swatch { width: 10px; height: 10px; border-radius: 2px; }
+.legend { display: grid; grid-template-columns: 1fr 1fr; gap: 1px 8px; margin-top: 6px; color: var(--muted); font-size: 11.5px; }
+.legend span { display: flex; align-items: center; gap: 6px; }
+.legend .swatch { width: 8px; height: 8px; flex: none; }
 
 input[type='range'] { width: 100%; margin: 4px 0 8px; accent-color: var(--accent); }
 input[type='checkbox'] { accent-color: var(--accent); margin: 0; }

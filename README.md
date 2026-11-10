@@ -24,6 +24,21 @@ Le paramètre d'URL `?n=2000000` choisit le nombre d'objets de la scène de test
   reculer et glisser ; E / A pour monter et descendre ; Maj pour aller 4 fois
   plus vite. Les touches sont lues par position physique.
 
+## Scène de test
+
+La ville de test est générée à partir de plans d'étage en cellules
+rectangulaires adjacentes (pièces, couloirs, escaliers, gaines d'ascenseur) :
+
+- trois typologies : barre à couloir central, plan en L, tour à noyau central
+  et couloir en anneau ;
+- noyaux (escalier, ascenseurs, gaine technique, sanitaires) alignés sur tous
+  les étages ; second escalier dans les longues barres et les tours hautes ;
+- un mur par arête partagée entre deux cellules, aucun entre deux couloirs ;
+- portes choisies pour que chaque cellule soit accessible depuis un couloir ;
+- façades avec fenêtres, entrées au rez-de-chaussée en bout de couloir ;
+- dalles ouvertes dans les trémies, escaliers à deux volées, toiture ;
+- cloisonnement des pièces qui change tous les quelques étages.
+
 ## Pourquoi c'est rapide
 
 - **Un objet = 32 octets.** Chaque mur, dalle ou espace est une boîte orientée
@@ -65,7 +80,7 @@ polygonal ni d'ouvertures dans les murs).
 | `src/scene.ts` | Format des objets, découpage en blocs |
 | `src/renderer.ts` | Rendu WebGL2, élimination hors champ, sélection |
 | `src/camera.ts`, `src/controls.ts` | Caméra orbitale, souris et tactile |
-| `src/generator.ts` | Ville procédurale de test |
+| `src/generator.ts` | Ville procédurale de test (plans d'étage, murs, portes, escaliers) |
 | `src/importer.ts` | Import JSON |
 | `src/worker.ts` | Préparation de la scène hors du fil principal |
 | `src/main.ts` | Interface |

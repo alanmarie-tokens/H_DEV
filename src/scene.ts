@@ -16,6 +16,14 @@ export const SPACE = 2;
 export const LAYER_COUNT = 3;
 export const LAYER_NAMES = ['Mur', 'Dalle', 'Espace'];
 
+/** Display name of each object kind, per layer. Kind 0 is the generic default. */
+export const KIND_NAMES = [
+  ['Mur', 'Mur extérieur', 'Cloison', 'Mur de noyau', 'Linteau', 'Allège'],
+  ['Dalle', 'Dalle', 'Toiture', 'Marche', 'Palier'],
+  ['Espace', 'Bureau', 'Salle de réunion', 'Espace ouvert', 'Sanitaires', 'Local technique',
+    'Couloir', 'Escalier', 'Ascenseur'],
+];
+
 export function rgba(r: number, g: number, b: number, a = 255): number {
   return (r | (g << 8) | (b << 16) | (a << 24)) >>> 0;
 }
@@ -25,17 +33,20 @@ export class BoxList {
   count = 0;
   f32: Float32Array;
   u32: Uint32Array;
+  /** One kind per box (index into KIND_NAMES of its layer); not sent to the GPU. */
+  kinds: Uint8Array;
 
   constructor(capacity = 4096) {
     const buffer = new ArrayBuffer(capacity * STRIDE_BYTES);
     this.f32 = new Float32Array(buffer);
     this.u32 = new Uint32Array(buffer);
+    this.kinds = new Uint8Array(capacity);
   }
 
   push(
     cx: number, cy: number, cz: number,
     hx: number, hy: number, hz: number,
-    yaw: number, color: number,
+    yaw: number, color: number, kind = 0,
   ): void {
     let o = this.count * STRIDE_WORDS;
     if (o + STRIDE_WORDS > this.f32.length) {
@@ -44,7 +55,11 @@ export class BoxList {
       f32.set(this.f32);
       this.f32 = f32;
       this.u32 = new Uint32Array(buffer);
+      const kinds = new Uint8Array(this.kinds.length * 2);
+      kinds.set(this.kinds);
+      this.kinds = kinds;
     }
+    this.kinds[this.count] = kind;
     const f = this.f32;
     f[o++] = cx; f[o++] = cy; f[o++] = cz;
     f[o++] = hx; f[o++] = hy; f[o++] = hz;
@@ -57,6 +72,8 @@ export class BoxList {
 /** One object type, sorted so that each spatial chunk is a contiguous range. */
 export interface LayerData {
   data: ArrayBuffer;
+  /** Kind of each object, in the same order as `data`. */
+  kinds: Uint8Array;
   count: number;
   chunkStart: Uint32Array;
   chunkCount: Uint32Array;
@@ -138,6 +155,7 @@ function buildLayer(list: BoxList, minX: number, minY: number, cell: number, sid
   const cursor = starts.slice();
   const out = new ArrayBuffer(n * STRIDE_BYTES);
   const dst = new Uint32Array(out);
+  const kinds = new Uint8Array(n);
   const boxes = new Float32Array(cells * 6);
   for (let c = 0; c < cells; c++) {
     boxes[c * 6] = boxes[c * 6 + 1] = boxes[c * 6 + 2] = Infinity;
@@ -146,7 +164,9 @@ function buildLayer(list: BoxList, minX: number, minY: number, cell: number, sid
 
   for (let i = 0, o = 0; i < n; i++, o += STRIDE_WORDS) {
     const c = cellOf[i];
-    let d = cursor[c]++ * STRIDE_WORDS;
+    const slot = cursor[c]++;
+    kinds[slot] = list.kinds[i];
+    let d = slot * STRIDE_WORDS;
     for (let k = 0; k < STRIDE_WORDS; k++) dst[d++] = src[o + k];
 
     const cs = Math.abs(Math.cos(srcF[o + 6])), sn = Math.abs(Math.sin(srcF[o + 6]));
@@ -172,13 +192,13 @@ function buildLayer(list: BoxList, minX: number, minY: number, cell: number, sid
     chunkBox.set(boxes.subarray(c * 6, c * 6 + 6), k * 6);
     k++;
   }
-  return { data: out, count: n, chunkStart, chunkCount, chunkBox };
+  return { data: out, kinds, count: n, chunkStart, chunkCount, chunkBox };
 }
 
 export function sceneTransferables(scene: SceneData): Transferable[] {
   const list: Transferable[] = [scene.bounds.buffer];
   for (const l of scene.layers) {
-    list.push(l.data, l.chunkStart.buffer, l.chunkCount.buffer, l.chunkBox.buffer);
+    list.push(l.data, l.kinds.buffer, l.chunkStart.buffer, l.chunkCount.buffer, l.chunkBox.buffer);
   }
   return list;
 }
