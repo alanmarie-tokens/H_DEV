@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Visionneuse 3D — murs, dalles, espaces</title>
+  </head>
+  <body>
+    <canvas id="view"></canvas>
+
+    <aside id="panel">
+      <h1>Visionneuse 3D</h1>
+      <p class="sub">Murs, dalles et espaces — rendu WebGL2 instancié</p>
+
+      <section>
+        <h2>Scène de test</h2>
+        <div class="row"><span>Objets demandés</span><b id="count-label"></b></div>
+        <input id="count" type="range" min="0" step="1" />
+        <div class="buttons">
+          <button id="generate" class="primary">Générer</button>
+          <label class="button">Importer JSON<input id="file" type="file" accept=".json,application/json" /></label>
+        </div>
+        <div id="status"></div>
+      </section>
+
+      <section>
+        <h2>Calques</h2>
+        <label class="check"><input id="layer-0" type="checkbox" checked /><i class="swatch" style="background:#d6d0c6"></i>Murs<span class="n" id="n-0">0</span></label>
+        <label class="check"><input id="layer-1" type="checkbox" checked /><i class="swatch" style="background:#707682"></i>Dalles<span class="n" id="n-1">0</span></label>
+        <label class="check"><input id="layer-2" type="checkbox" checked /><i class="swatch" style="background:#4f9dff"></i>Espaces<span class="n" id="n-2">0</span></label>
+      </section>
+
+      <section>
+        <h2>Performance</h2>
+        <div class="row"><span>Objets dans la scène</span><b id="s-total">0</b></div>
+        <div class="row"><span>Objets dessinés</span><b id="s-drawn">0</b></div>
+        <div class="row"><span>Triangles</span><b id="s-tris">0</b></div>
+        <div class="row"><span>Appels de dessin</span><b id="s-calls">0</b></div>
+        <div class="row"><span>Blocs visibles</span><b id="s-chunks">0</b></div>
+        <div class="row"><span>CPU par image</span><b id="s-cpu">—</b></div>
+        <div class="row"><span>Images / s</span><b id="s-fps">—</b></div>
+        <label class="check" style="margin-top:6px"><input id="rotate" type="checkbox" />Rotation automatique</label>
+        <div class="buttons" style="margin-top:6px"><button id="fit">Recadrer la vue</button></div>
+      </section>
+
+      <section>
+        <h2>Sélection</h2>
+        <div id="selection"></div>
+      </section>
+
+      <section class="hint">
+        Glisser : orbite · Maj ou clic droit + glisser : déplacement · Molette / pincement : zoom
+      </section>
+    </aside>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
