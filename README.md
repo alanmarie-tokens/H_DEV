@@ -1,175 +1,66 @@
-# Planning Gantt - Application Web
+# H_DEV — Visionneuse 3D haute performance
 
-Application de planification Gantt accessible via GitHub Pages avec synchronisation multi-utilisateurs en temps réel.
+Application web de visualisation 3D de **murs**, **dalles** et **espaces**,
+conçue pour afficher un très grand nombre d'objets simultanément (jusqu'à
+plusieurs millions). Moteur WebGL2 sur mesure, sans dépendance à l'exécution.
 
-## 📋 Description
-
-Cette application de planning Gantt permet de :
-- Créer et gérer des tâches dans un diagramme de Gantt interactif
-- Organiser les tâches par groupes et métiers
-- Suivre l'avancement, les coûts et les ressources (ETP)
-- Exporter/importer des plannings au format JSON
-- **Synchroniser les données en temps réel entre plusieurs utilisateurs (via Firebase)**
-
-## 🌐 Accès GitHub Pages
-
-L'application est déployée et accessible directement via GitHub Pages :
-
-**URL : [https://nilujien.github.io/H_DEV/](https://nilujien.github.io/H_DEV/)**
-
-Aucune installation n'est nécessaire ! L'application fonctionne entièrement dans votre navigateur.
-
-## 🚀 Fonctionnalités principales
-
-- ✅ Application statique (HTML/CSS/JavaScript)
-- ✅ **Synchronisation multi-utilisateurs en temps réel (Firebase Realtime Database)**
-- ✅ Stockage de toutes les données dans Firebase
-- ✅ Déploiement automatique via GitHub Actions
-- ✅ Accessible publiquement
-
-## 💾 Stockage des Données
-
-### Firebase Realtime Database (REQUIS)
-
-**Firebase Realtime Database est REQUIS** pour que l'application fonctionne. Toutes les données sont stockées dans Firebase :
-- Données de planning (lignes, tâches, jalons)
-- Préférences utilisateur (thème, configuration KPI)
-- Synchronisation multi-utilisateurs en temps réel
-
-**Important** : Utilisez "Export JSON" régulièrement pour sauvegarder vos plannings localement.
-
-### Sauvegarde automatique
-
-L'application sauvegarde automatiquement toutes les modifications dans Firebase après un délai de 400 ms (debounced).
-
-## 🔄 Configuration Firebase
-
-Pour activer l'application, suivez le guide **[FIREBASE_SETUP.md](FIREBASE_SETUP.md)**.
-
-En résumé :
-1. Créez un projet sur [console.firebase.google.com](https://console.firebase.google.com)
-2. Activez **Realtime Database** (région Europe)
-3. Configurez les règles de sécurité
-4. Copiez la configuration Firebase dans la section `FIREBASE_CONFIG` de `index.html`
-5. Committez et poussez → le déploiement est automatique
-
-## 📦 Export/Import de Données
-
-### Exporter
-
-1. Cliquez sur "↓ Export" dans l'interface
-2. Un fichier JSON sera téléchargé avec toutes vos données
-
-### Importer
-
-1. Cliquez sur "↑ Import" dans l'interface
-2. Sélectionnez un fichier JSON précédemment exporté
-3. Les données seront chargées et synchronisées dans Firebase
-
-## 📁 Structure du Projet
-
-```
-H_DEV/
-├── index.html              # Interface utilisateur (contient la config Firebase)
-├── FIREBASE_SETUP.md       # Guide de configuration Firebase
-├── .github/
-│   └── workflows/
-│       └── deploy.yml     # Workflow GitHub Actions pour déploiement
-├── server.js               # Serveur Express (optionnel, pour dev local)
-├── package.json            # Dépendances pour développement local
-├── scripts/
-│   └── init-db.js         # Script d'initialisation DB (optionnel)
-└── .gitignore             # Fichiers à ignorer par Git
-```
-
-## 📋 Prérequis
-
-- Utilisez un navigateur récent (Chrome, Firefox, Safari, Edge)
-- Activez JavaScript
-- Configurez Firebase Realtime Database (voir [FIREBASE_SETUP.md](./FIREBASE_SETUP.md))
-
-## 🛠️ Développement
-
-### Mode développement local
+## Démarrer
 
 ```bash
 npm install
-npm start
+npm run dev      # serveur de développement
+npm run build    # vérification TypeScript + build de production dans dist/
 ```
 
-Le serveur démarre sur http://localhost:3000
+Le paramètre d'URL `?n=2000000` choisit le nombre d'objets de la scène de test.
 
-### Structure du code
+## Pourquoi c'est rapide
 
-- **Frontend** : Vanilla JavaScript dans `index.html` (section `<script>`)
-- **Sync** : Firebase Realtime Database (SDK compat v10 chargé via CDN)
-- **Stockage** : Toutes les données dans Firebase uniquement
-- **Backend local** : Express.js dans `server.js` (optionnel, non utilisé en production)
+- **Un objet = 32 octets.** Chaque mur, dalle ou espace est une boîte orientée
+  (centre, demi-dimensions, rotation, couleur). Les mêmes octets vont du
+  worker au GPU sans conversion.
+- **Rendu instancié.** Un seul cube unitaire, étiré par le vertex shader.
+- **Découpage spatial.** Les objets sont triés en blocs sur une grille ; le
+  CPU ne manipule que ces blocs à chaque image (élimination hors champ, tri
+  avant → arrière), jamais les objets un par un : un appel de dessin par bloc
+  visible.
+- **Rendu à la demande.** Aucune image n'est calculée tant que rien ne change.
+- **Préparation hors du fil principal.** Génération, import et tri se font
+  dans un Web Worker ; les tampons sont transférés, pas copiés.
+- **Sélection par GPU.** Le clic rend les identifiants dans une cible de
+  1 × 1 pixel avec une projection resserrée sur ce pixel.
 
-## ⚠️ Notes Importantes
+## Importer ses données
 
-### 1. Stockage Firebase
+Bouton « Importer JSON ». Coordonnées en mètres, plan `[x, y]`, altitude en Z.
+Exemple complet : [`public/exemple.json`](public/exemple.json).
 
-**Impact** : L'application utilise Firebase Realtime Database pour stocker toutes les données.
+```json
+{
+  "walls":  [{ "start": [0, 0], "end": [12, 0], "elevation": 0, "height": 3, "thickness": 0.2, "color": "#d6d0c6" }],
+  "slabs":  [{ "min": [0, 0], "max": [12, 8], "elevation": 0, "thickness": 0.25, "rotation": 0 }],
+  "spaces": [{ "min": [0.2, 0.2], "max": [5.9, 7.8], "elevation": 0.25, "height": 2.6, "color": "#4f9dff" }]
+}
+```
 
-**Conséquences** :
-- Les données sont stockées dans le cloud Firebase
-- Synchronisation automatique entre tous les utilisateurs
-- Les données persistent tant que votre projet Firebase est actif
-- **Important** : Utilisez la fonction "Export JSON" régulièrement pour sauvegarder vos plannings localement
+`rotation` est en degrés autour du centre du rectangle ; `color` est facultatif.
 
-### 2. Sauvegarde et backup
+Limite actuelle : dalles et espaces sont rectangulaires (pas de contour
+polygonal ni d'ouvertures dans les murs).
 
-**Impact** : Les données sont dans Firebase.
+## Structure
 
-**Recommandations** :
-- Exportez régulièrement vos plannings (bouton "Export JSON")
-- Sauvegardez les fichiers JSON exportés dans un endroit sûr
-- Firebase conserve vos données même si tous les utilisateurs ferment leurs navigateurs
+| Fichier | Rôle |
+| --- | --- |
+| `src/scene.ts` | Format des objets, découpage en blocs |
+| `src/renderer.ts` | Rendu WebGL2, élimination hors champ, sélection |
+| `src/camera.ts`, `src/controls.ts` | Caméra orbitale, souris et tactile |
+| `src/generator.ts` | Ville procédurale de test |
+| `src/importer.ts` | Import JSON |
+| `src/worker.ts` | Préparation de la scène hors du fil principal |
+| `src/main.ts` | Interface |
 
-### 3. Capacité de stockage
+## Archive
 
-**Impact** : Firebase Realtime Database (forfait gratuit) a une limite de 1 GB de stockage et 10 GB/mois de transfert.
-
-**Conséquences** :
-- Largement suffisant pour un usage d'équipe (2-20 utilisateurs)
-- Pour des plannings très volumineux (milliers de tâches), surveillez votre usage dans la console Firebase
-
-### 4. Compatibilité navigateur
-
-**Impact** : L'application utilise des fonctionnalités JavaScript modernes.
-
-**Recommandations** :
-- Utilisez un navigateur récent (Chrome, Firefox, Safari, Edge)
-- Activez JavaScript
-- Connexion internet requise pour la synchronisation Firebase
-
-## 🐛 Dépannage
-
-### Les données ne se synchronisent pas entre utilisateurs
-
-→ Firebase n'est peut-être pas configuré. Suivez [FIREBASE_SETUP.md](FIREBASE_SETUP.md).
-
-### Le badge "⚠️ Erreur sync" s'affiche
-
-1. Vérifiez votre connexion internet
-2. Vérifiez les règles de sécurité dans Firebase Console
-3. Ouvrez la console du navigateur (F12) pour plus de détails
-
-### L'application affiche "Firebase requis"
-
-→ Firebase n'est pas configuré ou la configuration est incorrecte. Vérifiez la section `FIREBASE_CONFIG` dans `index.html` et assurez-vous que tous les champs sont remplis.
-
-### Réinitialiser toutes les données
-
-**Attention** : Cette opération est irréversible et supprimera toutes les données de Firebase.
-
-Dans la console Firebase, supprimez manuellement les données du nœud `planning` de votre Realtime Database, ou exportez d'abord vos données puis supprimez-les.
-
-## 📄 Licence
-
-ISC
-
-## 👥 Support
-
-Pour toute question ou problème, créez une issue dans le dépôt GitHub.
+L'ancien projet (planning Gantt « Planr ») est conservé dans
+[`archive/planr-v1/`](archive/planr-v1/).

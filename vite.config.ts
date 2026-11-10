@@ -1,16 +1,7 @@
-import { defineConfig } from 'vite'
-import react from '@vitejs/plugin-react'
-import path from 'path'
+import { defineConfig } from 'vite';
 
 export default defineConfig({
-  base: '/H_DEV/',
-  plugins: [react()],
-  resolve: {
-    alias: {
-      '@': path.resolve(__dirname, './src'),
-    },
-  },
-  server: {
-    port: 5173,
-  },
-})
+  base: './',
+  build: { target: 'es2020' },
+  worker: { format: 'es' },
+});
