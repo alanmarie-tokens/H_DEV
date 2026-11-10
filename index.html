@@ -44,12 +44,23 @@
       </section>
 
       <section>
+        <h2>Navigation</h2>
+        <label class="check"><input id="fly" type="checkbox" />Mode vol <span class="n">touche F</span></label>
+        <div class="row" style="margin-top:4px"><span>Vitesse de vol</span><b id="speed-label"></b></div>
+        <input id="speed" type="range" min="0" step="1" />
+        <div class="hint">
+          ZQSD (WASD) ou flèches : avancer, reculer, glisser · E / A : monter, descendre · Maj : ×4<br />
+          Mode vol : glisser pour regarder autour de soi, molette pour avancer.
+        </div>
+      </section>
+
+      <section>
         <h2>Sélection</h2>
         <div id="selection"></div>
       </section>
 
       <section class="hint">
-        Glisser : orbite · Maj ou clic droit + glisser : déplacement · Molette / pincement : zoom
+        Hors mode vol — glisser : orbite · Maj ou clic droit + glisser : déplacement · molette / pincement : zoom
       </section>
     </aside>
 

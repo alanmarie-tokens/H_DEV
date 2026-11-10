@@ -41,6 +41,29 @@ export class Camera {
     this.target[2] += ce * uy;
   }
 
+  /** Rotates the view around the eye (the eye stays fixed, the target moves). */
+  look(dx: number, dy: number): void {
+    const d = this.distance, t = this.target;
+    let ce = Math.cos(this.elevation);
+    const ex = t[0] + ce * Math.cos(this.azimuth) * d;
+    const ey = t[1] + ce * Math.sin(this.azimuth) * d;
+    const ez = t[2] + Math.sin(this.elevation) * d;
+    this.orbit(dx, dy);
+    ce = Math.cos(this.elevation);
+    t[0] = ex - ce * Math.cos(this.azimuth) * d;
+    t[1] = ey - ce * Math.sin(this.azimuth) * d;
+    t[2] = ez - Math.sin(this.elevation) * d;
+  }
+
+  /** Translates the camera, in metres: along the view, to the right, and along world Z. */
+  move(forward: number, right: number, up: number): void {
+    const sa = Math.sin(this.azimuth), ca = Math.cos(this.azimuth);
+    const se = Math.sin(this.elevation), ce = Math.cos(this.elevation);
+    this.target[0] += -ce * ca * forward - sa * right;
+    this.target[1] += -ce * sa * forward + ca * right;
+    this.target[2] += -se * forward + up;
+  }
+
   zoom(factor: number, maxDistance: number): void {
     this.distance = Math.min(maxDistance, Math.max(1, this.distance * factor));
   }
