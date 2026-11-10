@@ -1,7 +1,9 @@
 // WebGL2 renderer: one instanced unit cube, one draw call per visible chunk.
 //
 // Per frame the CPU only touches chunks (a few thousand at most), never
-// individual objects: frustum culling, front-to-back ordering, draw.
+// individual objects: scope and frustum culling, front-to-back ordering, draw.
+// The displayed scope (a site, building or storey) is a range of storey ids:
+// chunks outside it are skipped, and the vertex shader discards the rest.
 
 import { Camera } from './camera';
 import { LAYER_COUNT, SPACE, STRIDE_BYTES, type SceneData } from './scene';
@@ -14,7 +16,10 @@ layout(location=2) in vec3 iCenter;
 layout(location=3) in vec3 iHalf;
 layout(location=4) in float iYaw;
 layout(location=5) in vec4 iColor;
+layout(location=6) in uint iStorey;
 uniform mat4 uViewProj;
+// Storey ids to display: [first, end).
+uniform uvec2 uScope;
 uniform int uBaseId;
 vec3 worldPos(float c, float s) {
   vec3 l = aPos * iHalf;
@@ -28,6 +33,12 @@ uniform float uFar;
 flat out vec4 vColor;
 out float vFog;
 void main() {
+  if (iStorey < uScope.x || iStorey >= uScope.y) {
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    vColor = vec4(0.0);
+    vFog = 0.0;
+    return;
+  }
   float c = cos(iYaw), s = sin(iYaw);
   vec3 n = vec3(c * aNormal.x - s * aNormal.y, s * aNormal.x + c * aNormal.y, aNormal.z);
   float light = 0.5 + 0.5 * max(dot(n, vec3(0.37, 0.24, 0.9)), 0.0) + 0.08 * n.x;
@@ -51,6 +62,11 @@ void main() {
 const VS_PICK = VS_COMMON + `
 flat out int vId;
 void main() {
+  if (iStorey < uScope.x || iStorey >= uScope.y) {
+    gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
+    vId = 0;
+    return;
+  }
   vId = uBaseId + gl_InstanceID + 1;
   gl_Position = uViewProj * vec4(worldPos(cos(iYaw), sin(iYaw)), 1.0);
 }`;
@@ -79,6 +95,8 @@ export class Renderer {
   readonly layerVisible = [true, true, true];
   /** Global object id (layer offset + index in layer), or -1. */
   selected = -1;
+  /** Storey ids to display: [first, end). Everything by default. */
+  readonly scope = new Uint32Array([0, 0xffffffff]);
   bounds: Float32Array = new Float32Array([-1, -1, -1, 1, 1, 1]);
   /** First global id of each layer. */
   layerBase = new Uint32Array(LAYER_COUNT + 1);
@@ -98,6 +116,11 @@ export class Renderer {
   private chunkLayer = new Uint8Array(0);
   private chunkCount = new Uint32Array(0);
   private chunkBaseId = new Uint32Array(0);
+  private chunkLo = new Uint32Array(0);
+  /** Index of the first object of each chunk in its layer, and object ranges per storey. */
+  private chunkFirst = new Uint32Array(0);
+  private storeyStart: Uint32Array[] = [];
+  private chunkHi = new Uint32Array(0);
   private chunkBox = new Float32Array(0);
 
   // Scratch buffers reused every frame.
@@ -144,10 +167,10 @@ export class Renderer {
 
     this.mainProgram = this.link(VS_MAIN, FS_MAIN);
     this.pickProgram = this.link(VS_PICK, FS_PICK);
-    for (const name of ['uViewProj', 'uBaseId', 'uSelected', 'uFar', 'uFogColor']) {
+    for (const name of ['uViewProj', 'uBaseId', 'uScope', 'uSelected', 'uFar', 'uFogColor']) {
       this.uMain[name] = gl.getUniformLocation(this.mainProgram, name);
     }
-    for (const name of ['uViewProj', 'uBaseId']) {
+    for (const name of ['uViewProj', 'uBaseId', 'uScope']) {
       this.uPick[name] = gl.getUniformLocation(this.pickProgram, name);
     }
 
@@ -202,6 +225,12 @@ export class Renderer {
     this.chunkLayer = new Uint8Array(chunkTotal);
     this.chunkCount = new Uint32Array(chunkTotal);
     this.chunkBaseId = new Uint32Array(chunkTotal);
+    this.chunkLo = new Uint32Array(chunkTotal);
+    this.chunkFirst = new Uint32Array(chunkTotal);
+    this.storeyStart = scene.layers.map((l) => l.storeyStart);
+    this.chunkHi = new Uint32Array(chunkTotal);
+    this.scope[0] = 0;
+    this.scope[1] = 0xffffffff;
     this.chunkBox = new Float32Array(chunkTotal * 6);
     this.visible = new Uint32Array(chunkTotal);
     this.depth = new Float32Array(chunkTotal);
@@ -236,12 +265,17 @@ export class Renderer {
         gl.vertexAttribPointer(4, 1, gl.FLOAT, false, STRIDE_BYTES, offset + 24);
         gl.enableVertexAttribArray(5);
         gl.vertexAttribPointer(5, 4, gl.UNSIGNED_BYTE, true, STRIDE_BYTES, offset + 28);
-        for (let a = 2; a <= 5; a++) gl.vertexAttribDivisor(a, 1);
+        gl.enableVertexAttribArray(6);
+        gl.vertexAttribIPointer(6, 1, gl.UNSIGNED_INT, STRIDE_BYTES, offset + 32);
+        for (let a = 2; a <= 6; a++) gl.vertexAttribDivisor(a, 1);
 
         this.chunkVao.push(vao);
         this.chunkLayer[k] = li;
         this.chunkCount[k] = layer.chunkCount[c];
         this.chunkBaseId[k] = idBase + layer.chunkStart[c];
+        this.chunkLo[k] = layer.chunkLo[c];
+        this.chunkFirst[k] = layer.chunkStart[c];
+        this.chunkHi[k] = layer.chunkHi[c];
         this.chunkBox.set(layer.chunkBox.subarray(c * 6, c * 6 + 6), k * 6);
       }
       idBase += layer.count;
@@ -272,11 +306,13 @@ export class Renderer {
       p[16 + i] = r3 + r2; p[20 + i] = r3 - r2;
     }
     const box = this.chunkBox, eye = this.camera.eye;
+    const first = this.scope[0], end = this.scope[1];
     let n = 0;
     chunks: for (let k = 0, total = this.chunkCount.length; k < total; k++) {
       const layer = this.chunkLayer[k];
       if (!this.layerVisible[layer]) continue;
       if (transparent !== null && (layer === SPACE) !== transparent) continue;
+      if (this.chunkHi[k] < first || this.chunkLo[k] >= end) continue;
       const b = k * 6;
       for (let q = 0; q < 24; q += 4) {
         const a = p[q], bb = p[q + 1], c = p[q + 2];
@@ -300,8 +336,13 @@ export class Renderer {
       const k = this.visible[i];
       gl.bindVertexArray(this.chunkVao[k]);
       gl.uniform1i(baseIdLocation, this.chunkBaseId[k]);
-      gl.drawElementsInstanced(gl.TRIANGLES, 36, gl.UNSIGNED_BYTE, 0, this.chunkCount[k]);
-      this.stats.instances += this.chunkCount[k];
+      const count = this.chunkCount[k];
+      gl.drawElementsInstanced(gl.TRIANGLES, 36, gl.UNSIGNED_BYTE, 0, count);
+      // Count only the objects of the chunk that belong to the displayed scope.
+      const starts = this.storeyStart[this.chunkLayer[k]];
+      const from = Math.max(this.chunkFirst[k], starts[Math.min(this.scope[0], starts.length - 1)]);
+      const to = Math.min(this.chunkFirst[k] + count, starts[Math.min(this.scope[1], starts.length - 1)]);
+      this.stats.instances += Math.max(0, to - from);
     }
     this.stats.drawCalls += n;
     this.stats.chunksVisible += n;
@@ -325,6 +366,7 @@ export class Renderer {
     gl.useProgram(this.mainProgram);
     gl.uniformMatrix4fv(this.uMain.uViewProj, false, cam.viewProj);
     gl.uniform1i(this.uMain.uSelected, this.selected);
+    gl.uniform2ui(this.uMain.uScope, this.scope[0], this.scope[1]);
     gl.uniform1f(this.uMain.uFar, cam.far);
     gl.uniform3f(this.uMain.uFogColor, BACKGROUND[0], BACKGROUND[1], BACKGROUND[2]);
 
@@ -370,6 +412,7 @@ export class Renderer {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.useProgram(this.pickProgram);
     gl.uniformMatrix4fv(this.uPick.uViewProj, false, m);
+    gl.uniform2ui(this.uPick.uScope, this.scope[0], this.scope[1]);
 
     const saved = { ...this.stats };
     this.draw(this.cull(m, null), this.uPick.uBaseId);

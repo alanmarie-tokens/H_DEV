@@ -1,4 +1,4 @@
-// Procedural city used as a stress test.
+// Procedural city used as a stress test: sites of a few buildings each.
 //
 // Each building has a floor plan made of rectangular cells that tile its
 // footprint: rooms, corridors, stairs, lift shafts. Everything else is derived
@@ -10,15 +10,17 @@
 // Cores (stairs, lifts) stay in place on every floor; the room partitioning
 // changes every few floors.
 
-import { BoxList, rgba } from './scene';
+import { BoxList, GROUNDS, HierarchyBuilder, STOREY_GROUNDS, STOREY_ROOF, rgba } from './scene';
 
 const SLAB = 0.25;
+/** Size of a building lot, and of the cell reserved for a site of up to 4 x 4 lots. */
 const PITCH = 90;
+const SITE_PITCH = 4 * PITCH + 50;
 const EPS = 1e-3;
 
 // Kinds: indices into KIND_NAMES (scene.ts).
 const W_EXTERIOR = 1, W_PARTITION = 2, W_CORE = 3, W_LINTEL = 4, W_SILL = 5;
-const F_SLAB = 1, F_ROOF = 2, F_STEP = 3, F_LANDING = 4;
+const F_SLAB = 1, F_ROOF = 2, F_STEP = 3, F_LANDING = 4, F_GROUND = 5;
 const S_OFFICE = 1, S_MEETING = 2, S_OPEN = 3, S_WC = 4, S_TECH = 5, S_CORRIDOR = 6, S_STAIR = 7, S_LIFT = 8;
 
 const SPACE_COLORS = [
@@ -37,6 +39,7 @@ const CORE_COLOR = rgba(150, 152, 158);
 const SLAB_COLOR = rgba(112, 118, 130);
 const ROOF_COLOR = rgba(70, 76, 88);
 const STAIR_COLOR = rgba(176, 180, 188);
+const GROUND_COLOR = rgba(44, 54, 50);
 
 // When an item is emitted, depending on the floor.
 const ALWAYS = 0, GROUND_ONLY = 1, NOT_TOP = 2, NOT_GROUND = 3;
@@ -374,72 +377,95 @@ function randomParams(floors: number, rnd: () => number): Params {
   return p;
 }
 
-/** Returns [walls, slabs, spaces] holding at least `target` objects in total. */
-export function generate(target: number, seed = 1): BoxList[] {
+/** Builds sites of a few buildings each, until at least `target` objects exist. */
+export function generate(target: number, seed = 1): { lists: BoxList[]; hierarchy: HierarchyBuilder } {
   const lists = [new BoxList(), new BoxList(), new BoxList()];
+  const hierarchy = new HierarchyBuilder();
   const rnd = mulberry32(seed);
   const total = () => lists[0].count + lists[1].count + lists[2].count;
 
-  // Square spiral over grid cells, so any object count stays centred.
+  // Square spiral over site cells, so any object count stays centred.
   let gx = 0, gy = 0, dx = 0, dy = -1;
   while (total() < target) {
-    const bx = gx * PITCH + (rnd() - 0.5) * 16;
-    const by = gy * PITCH + (rnd() - 0.5) * 16;
+    const sx = gx * SITE_PITCH, sy = gy * SITE_PITCH;
     if (gx === gy || (gx < 0 && gx === -gy) || (gx > 0 && gx === 1 - gy)) {
       const t = dx; dx = -dy; dy = t;
     }
     gx += dx; gy += dy;
 
-    const r = rnd();
-    const floors = 2 + Math.floor(r * r * 38);
-    const floorHeight = 2.9 + rnd() * 0.6;
-    const params = randomParams(floors, rnd);
-    const yaw = rnd() < 0.7 ? Math.floor(rnd() * 2) * Math.PI * 0.5 : rnd() * Math.PI;
-    const c = Math.cos(yaw), s = Math.sin(yaw);
-    const tone = 196 + Math.floor(rnd() * 44);
-    const exterior = rgba(tone, tone - 6, tone - 16);
+    // A site is a parcel divided into lots, one building per lot.
+    const nx = 2 + Math.floor(rnd() * 3), ny = 2 + Math.floor(rnd() * 3);
+    const site = hierarchy.site(`Site ${hierarchy.siteCount + 1}`);
+    const grounds = hierarchy.storey(hierarchy.building(site, 'Terrain', GROUNDS), 'Terrain', -0.2, 0.2, STOREY_GROUNDS);
+    lists[1].push(sx, sy, -0.1, (nx * PITCH) / 2, (ny * PITCH) / 2, 0.1, 0, GROUND_COLOR, F_GROUND, grounds);
 
-    // The plan is centred on the building origin.
-    const rects = footprint(params);
-    let maxX = 0, maxY = 0;
-    for (const f of rects) { maxX = Math.max(maxX, f[2]); maxY = Math.max(maxY, f[3]); }
-    const ox = maxX / 2, oy = maxY / 2;
-
-    // A few partition layouts, alternating every `group` floors around the same cores.
-    const variantSeed = Math.floor(rnd() * 0x7fffffff);
-    const variants: Template[] = [];
-    const variantCount = 1 + Math.floor(rnd() * 3);
-    for (let v = 0; v < variantCount; v++) {
-      variants.push(buildTemplate(plan(params, mulberry32(variantSeed + v)), floorHeight, exterior));
-    }
-    const group = 1 + Math.floor(rnd() * 4);
-
-    const emit = (list: BoxList, items: number[], z: number, f: number, last: boolean) => {
-      for (let o = 0; o < items.length; o += 10) {
-        const when = items[o + 9];
-        if ((when === GROUND_ONLY && f > 0) || (when === NOT_GROUND && f === 0) || (when === NOT_TOP && last)) continue;
-        const lx = items[o] - ox, ly = items[o + 1] - oy;
-        list.push(bx + c * lx - s * ly, by + s * lx + c * ly, z + items[o + 2],
-          items[o + 3], items[o + 4], items[o + 5], yaw + items[o + 6], items[o + 7], items[o + 8]);
+    let letter = 0;
+    for (let j = 0; j < ny; j++) {
+      for (let i = 0; i < nx && total() < target; i++) {
+        const name = `Bâtiment ${hierarchy.siteCount}${String.fromCharCode(65 + letter++)}`;
+        building(lists, hierarchy, site, name, rnd, target, total,
+          sx + (i - (nx - 1) / 2) * PITCH + (rnd() - 0.5) * 16, sy + (j - (ny - 1) / 2) * PITCH + (rnd() - 0.5) * 16);
       }
-    };
-
-    let f = 0;
-    for (; f < floors; f++) {
-      const t = variants[Math.floor(f / group) % variantCount];
-      // The floor is the last one if the object budget runs out here.
-      const last = f === floors - 1 || total() + (t.walls.length + t.slabs.length + t.spaces.length) / 10 >= target;
-      const z = f * floorHeight;
-      emit(lists[0], t.walls, z, f, last);
-      emit(lists[1], t.slabs, z, f, last);
-      emit(lists[2], t.spaces, z, f, last);
-      if (last) { f++; break; }
-    }
-    for (const rect of rects) {
-      const lx = (rect[0] + rect[2]) / 2 - ox, ly = (rect[1] + rect[3]) / 2 - oy;
-      lists[1].push(bx + c * lx - s * ly, by + s * lx + c * ly, f * floorHeight + SLAB / 2,
-        (rect[2] - rect[0]) / 2 + 0.3, (rect[3] - rect[1]) / 2 + 0.3, SLAB / 2, yaw, ROOF_COLOR, F_ROOF);
     }
   }
-  return lists;
+  return { lists, hierarchy };
+}
+
+function building(
+  lists: BoxList[], hierarchy: HierarchyBuilder, site: number, name: string,
+  rnd: () => number, target: number, total: () => number, bx: number, by: number,
+): void {
+  const r = rnd();
+  const floors = 2 + Math.floor(r * r * 38);
+  const floorHeight = 2.9 + rnd() * 0.6;
+  const params = randomParams(floors, rnd);
+  const yaw = rnd() < 0.7 ? Math.floor(rnd() * 2) * Math.PI * 0.5 : rnd() * Math.PI;
+  const c = Math.cos(yaw), s = Math.sin(yaw);
+  const tone = 196 + Math.floor(rnd() * 44);
+  const exterior = rgba(tone, tone - 6, tone - 16);
+  const id = hierarchy.building(site, name);
+
+  // The plan is centred on the building origin.
+  const rects = footprint(params);
+  let maxX = 0, maxY = 0;
+  for (const f of rects) { maxX = Math.max(maxX, f[2]); maxY = Math.max(maxY, f[3]); }
+  const ox = maxX / 2, oy = maxY / 2;
+
+  // A few partition layouts, alternating every `group` floors around the same cores.
+  const variantSeed = Math.floor(rnd() * 0x7fffffff);
+  const variants: Template[] = [];
+  const variantCount = 1 + Math.floor(rnd() * 3);
+  for (let v = 0; v < variantCount; v++) {
+    variants.push(buildTemplate(plan(params, mulberry32(variantSeed + v)), floorHeight, exterior));
+  }
+  const group = 1 + Math.floor(rnd() * 4);
+
+  const emit = (list: BoxList, items: number[], z: number, f: number, last: boolean, storey: number) => {
+    for (let o = 0; o < items.length; o += 10) {
+      const when = items[o + 9];
+      if ((when === GROUND_ONLY && f > 0) || (when === NOT_GROUND && f === 0) || (when === NOT_TOP && last)) continue;
+      const lx = items[o] - ox, ly = items[o + 1] - oy;
+      list.push(bx + c * lx - s * ly, by + s * lx + c * ly, z + items[o + 2],
+        items[o + 3], items[o + 4], items[o + 5], yaw + items[o + 6], items[o + 7], items[o + 8], storey);
+    }
+  };
+
+  let f = 0;
+  for (; f < floors; f++) {
+    const t = variants[Math.floor(f / group) % variantCount];
+    // The floor is the last one if the object budget runs out here.
+    const last = f === floors - 1 || total() + (t.walls.length + t.slabs.length + t.spaces.length) / 10 >= target;
+    const z = f * floorHeight;
+    const storey = hierarchy.storey(id, f === 0 ? 'RDC' : `R+${f}`, z, floorHeight);
+    emit(lists[0], t.walls, z, f, last, storey);
+    emit(lists[1], t.slabs, z, f, last, storey);
+    emit(lists[2], t.spaces, z, f, last, storey);
+    if (last) { f++; break; }
+  }
+  const roof = hierarchy.storey(id, 'Toiture', f * floorHeight, SLAB, STOREY_ROOF);
+  for (const rect of rects) {
+    const lx = (rect[0] + rect[2]) / 2 - ox, ly = (rect[1] + rect[3]) / 2 - oy;
+    lists[1].push(bx + c * lx - s * ly, by + s * lx + c * ly, f * floorHeight + SLAB / 2,
+      (rect[2] - rect[0]) / 2 + 0.3, (rect[3] - rect[1]) / 2 + 0.3, SLAB / 2, yaw, ROOF_COLOR, F_ROOF, roof);
+  }
 }
